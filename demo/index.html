@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GoodWe Flow Card — preview</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100vh; background: #0b0d11; color: #e8eaf0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 28px 16px 60px;
+    }
+    h1 { font-size: 1rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b919e; margin: 0; }
+    .wrap { width: 100%; max-width: 420px; }
+    .scenarios { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .scenarios button {
+      background: rgba(255,255,255,0.06); color: #e8eaf0; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px; padding: 7px 14px; font-size: 0.8rem; cursor: pointer;
+    }
+    .scenarios button.active { background: #35d49a; color: #000; border-color: #35d49a; font-weight: 700; }
+    p.note { font-size: 0.75rem; color: #565c66; max-width: 420px; text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>GoodWe Flow Card</h1>
+  <div class="scenarios" id="scenarios"></div>
+  <div class="wrap" id="mount"></div>
+  <p class="note">Browser preview with mocked Home Assistant data — values jitter every 2 s.
+    Tap the Fast Charge pill to toggle it. In HA the nodes open the entity more-info dialog.</p>
+
+  <script type="module">
+    import "../dist/goodwe-flow-card-m0e.js";
+
+    // ---- mock hass ----------------------------------------------------
+    const E = {
+      pv: "sensor.symphony_house_goodwe_pv_power",
+      pv1: "sensor.symphony_house_goodwe_pv1_power",
+      prod: "sensor.symphony_house_goodwe_today_s_pv_generation",
+      soc: "sensor.symphony_house_goodwe_battery_state_of_charge",
+      battP: "sensor.symphony_house_goodwe_battery_power",
+      battDis: "sensor.symphony_house_goodwe_today_battery_discharge",
+      house: "sensor.symphony_house_goodwe_house_consumption",
+      ts: "sensor.symphony_house_goodwe_timestamp",
+      fast: "switch.symphony_house_goodwe_fast_charging_switch",
+    };
+
+    const scenarios = {
+      "Sunny day": { pv: 4800, house: 900, batt: -1400, soc: 76 },   // batt charging, exporting
+      "Cloudy": { pv: 620, house: 640, batt: 30, soc: 64 },
+      "Evening": { pv: 0, house: 1150, batt: 1100, soc: 48 },        // battery carrying the house
+      "Night import": { pv: 0, house: 800, batt: 0, soc: 14 },
+      "Fast charge": { pv: 0, house: 600, batt: -3000, soc: 35 },    // grid → battery
+    };
+    let current = { ...scenarios["Sunny day"] };
+    let fastOn = false;
+    let prodToday = 16.0;
+
+    const states = {};
+    const setState = (id, state, unit, device_class) => {
+      states[id] = { state: String(state), attributes: { unit_of_measurement: unit }, };
+      if (device_class) states[id].attributes.device_class = device_class;
+    };
+
+    const jitter = (v, pct = 0.06) => v === 0 ? 0 : v * (1 + (Math.random() - 0.5) * pct);
+
+    function refreshStates() {
+      const pv = Math.max(0, Math.round(jitter(current.pv)));
+      const house = Math.max(0, Math.round(jitter(current.house)));
+      const batt = Math.round(jitter(current.batt, 0.1));
+      setState(E.pv, pv, "W");
+      setState(E.pv1, pv, "W");
+      setState(E.house, house, "W");
+      setState(E.battP, batt, "W");
+      setState(E.soc, Math.round(current.soc), "%");
+      setState(E.prod, prodToday.toFixed(2), "kWh");
+      setState(E.battDis, "4.31", "kWh");
+      setState(E.ts, new Date().toISOString());
+      states[E.fast] = { state: fastOn ? "on" : "off", attributes: {} };
+    }
+
+    const hass = {
+      get states() { return states; },
+      callService(domain, service, data) {
+        if (data.entity_id === E.fast) {
+          fastOn = !fastOn;
+          if (fastOn) applyScenario("Fast charge"); else applyScenario("Sunny day");
+        }
+        push();
+      },
+    };
+
+    // ---- card ---------------------------------------------------------
+    const card = document.createElement("goodwe-flow-card-m0e");
+    card.setConfig({
+      type: "custom:goodwe-flow-card-m0e",
+      name: "SYMBOX",
+      battery_capacity_kwh: 1.6,
+      entities: {
+        pv_power: E.pv,
+        p1_power: E.pv1,
+        house_power: E.house,
+        battery_power: E.battP,
+        battery_soc: E.soc,
+        production_today: E.prod,
+        battery_today: E.battDis,
+        last_update: E.ts,
+      },
+      max_input_power: 6600,
+      switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
+    });
+    document.getElementById("mount").appendChild(card);
+    card.addEventListener("hass-more-info", (e) => console.log("more-info:", e.detail.entityId));
+
+    function push() { refreshStates(); card.hass = hass; }
+
+    // ---- scenario buttons --------------------------------------------
+    const bar = document.getElementById("scenarios");
+    function applyScenario(name) {
+      current = { ...scenarios[name] };
+      fastOn = name === "Fast charge";
+      [...bar.children].forEach((b) => b.classList.toggle("active", b.textContent === name));
+      push();
+    }
+    Object.keys(scenarios).forEach((name) => {
+      const b = document.createElement("button");
+      b.textContent = name;
+      b.onclick = () => applyScenario(name);
+      bar.appendChild(b);
+    });
+
+    applyScenario("Sunny day");
+    setInterval(() => { prodToday += current.pv / 1000 / 1800; push(); }, 2000);
+  </script>
+</body>
+</html>
