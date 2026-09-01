@@ -78,7 +78,7 @@
       setState(E.prod, prodToday.toFixed(2), "kWh");
       setState(E.battDis, "4.31", "kWh");
       setState(E.price, jitter(current.price, 0.04).toFixed(4), "$/kWh");
-      setState(E.ups, Math.round(jitter(current.house * 0.35)), "W");
+      setState(E.ups, Math.round(4 + current.house / 80), "%");
       setState(E.ts, new Date().toISOString());
       states[E.fast] = { state: fastOn ? "on" : "off", attributes: {} };
     }
@@ -112,7 +112,10 @@
       },
       bars: [
         { entity: E.pv1, name: "PV", max: 6600 },
-        { entity: E.ups, name: "UPS", max: 2400, color: "#5aa9e6" },
+      ],
+      tiles: [
+        { entity: E.ups, name: "UPS", sub: "Load", icon: "bolt", color: "#5aa9e6" },
+        { entity: E.price, name: "Amber", sub: "Now", icon: "grid" },
       ],
       switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
     });

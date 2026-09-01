@@ -26,6 +26,8 @@ scenarios.
   each with its own name, max scale and colour; a divider separates them from
   the flow diagram
 - Daily stats row: solar today, battery today, grid in/out today
+- Custom tiles for any sensor (`tiles:`) — UPS load, prices, temperatures —
+  auto-formatted by unit (%, W/kW, Wh/kWh, $/kWh) with pick-an-icon and colour
 - Quick-toggle pills for switches (e.g. GoodWe Fast Charge) — tap to toggle
 - Tap any node or stat to open the entity's more-info dialog
 - Accepts legacy `b2500d-card` entity keys, so an existing config drops in
@@ -77,6 +79,12 @@ bars:                            # labelled power bars under the flow
     name: UPS
     max: 2400
     color: "#5aa9e6"
+tiles:                           # optional extra tiles for any sensor
+  - entity: sensor.symphony_house_goodwe_ups_load
+    name: UPS
+    sub: Load
+    icon: bolt
+    color: "#5aa9e6"
 switches:
   - entity: switch.symphony_house_goodwe_fast_charging_switch
     name: Fast Charge
@@ -102,7 +110,8 @@ labels:            # optional — override any text on the card
 | `entities.grid_price` | — | Live electricity price shown in the grid node (`$/kWh` or `¢/kWh` sensors, e.g. Amber) |
 | `entities.last_update` | — | Timestamp sensor shown in the header |
 | `entities.p1_power` … `p4_power` | — | Per-string PV sensors (legacy style) |
-| `bars` | — | Labelled power bars: `[{entity, name, max, color}]` — overrides `pN_power`. `strings` is an accepted alias |
+| `bars` | — | Labelled power bars: `[{entity, name, max, color}]` — overrides `pN_power`. `%` sensors fill the bar directly (no `max` needed). `strings` is an accepted alias |
+| `tiles` | — | Extra stat tiles: `[{entity, name, sub, icon, color}]`, appended after the built-in daily tiles. Icons: `sun`, `home`, `battery`, `grid`, `chart`, `bolt` |
 | `max_input_power` … `max_input_power4` | `4000` | Max W per string, scales its bar |
 | `battery_capacity_kwh` | — | Usable pack size; enables the kWh readout |
 | `invert_battery` | `false` | Set if charging/discharging show reversed |

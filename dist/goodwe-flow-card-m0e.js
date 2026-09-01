@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -94,8 +94,8 @@ const ICONS = {
   bolt: `<path d="M13.5 3 L6.5 13.5 H11 L9.5 21 L17.5 10 H12.5 Z" stroke-linejoin="round" fill="none"/>`,
 };
 
-const icon = (name, cls = "") =>
-  `<svg class="gw-ic ${cls}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" fill="none">${ICONS[name] || ICONS.bolt}</svg>`;
+const icon = (name, cls = "", style = "") =>
+  `<svg class="gw-ic ${cls}"${style ? ` style="${style}"` : ""} viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" fill="none">${ICONS[name] || ICONS.bolt}</svg>`;
 
 /* ------------------------------------------------------------------- card */
 
@@ -167,6 +167,7 @@ class GoodweFlowCard extends HTMLElement {
       invert_battery: !!config.invert_battery,
       invert_grid: !!config.invert_grid,
       switches: config.switches || config.custom_settings || [],
+      tiles: Array.isArray(config.tiles) ? config.tiles : [],
       show_strings: config.show_bars !== false && config.show_strings !== false,
       show_stats: config.show_stats !== false,
       show_separator: config.show_separator !== false,
@@ -217,6 +218,24 @@ class GoodweFlowCard extends HTMLElement {
     return energyHtml(num(st.state), st.attributes.unit_of_measurement);
   }
 
+  // format any sensor state by its unit: %, W/kW, Wh/kWh, price, or raw
+  _fmtState(id) {
+    const st = this._state(id);
+    if (!st) return "—";
+    const v = num(st.state);
+    const unit = (st.attributes.unit_of_measurement || "").trim();
+    if (v === null) return st.state;
+    if (unit === "%") return `${Math.round(v)}<span class="u">%</span>`;
+    if (unit === "W" || unit === "kW") return powerHtml(unit === "kW" ? v * 1000 : v);
+    if (unit.includes("$") || unit.includes("¢")) {
+      const p = fmtPrice(v, unit);
+      const ix = p.indexOf("/");
+      return ix > 0 ? `${p.slice(0, ix)}<span class="u">${p.slice(ix)}</span>` : p;
+    }
+    if (/wh$/i.test(unit)) return energyHtml(v, unit);
+    return `${st.state}${unit ? `<span class="u">${unit}</span>` : ""}`;
+  }
+
   _moreInfo(entityId) {
     if (!entityId) return;
     const ev = new CustomEvent("hass-more-info", {
@@ -252,6 +271,13 @@ class GoodweFlowCard extends HTMLElement {
         ${c.battery_today ? tile(c.battery_today, L.battery_today, L.today, "battToday", "battery", "batt") : ""}
         ${c.grid_import_today ? tile(c.grid_import_today, L.grid_in, L.today, "gridInToday", "grid", "grid") : ""}
         ${c.grid_export_today ? tile(c.grid_export_today, L.grid_out, L.today, "gridOutToday", "grid", "grid") : ""}
+        ${c.tiles.map((t, i) => `
+        <div class="stat" data-entity="${t.entity}">
+          <span class="stat-title">${t.name || t.entity}</span>
+          <span class="stat-label">${t.sub ?? "Now"}</span>
+          <span class="stat-val" id="ctile${i}">—</span>
+          ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
+        </div>`).join("")}
       </div>` : "";
 
     const switchesHtml = c.switches.length ? `
@@ -296,7 +322,7 @@ class GoodweFlowCard extends HTMLElement {
         .u { font-size: 0.62em; font-weight: 600; color: var(--gw-dim); margin-left: 2px; }
 
         /* ---- flow area ---- */
-        .flow { position: relative; width: 100%; aspect-ratio: 420 / 300; container-type: inline-size; }
+        .flow { position: relative; width: 100%; aspect-ratio: 420 / 300; container-type: inline-size; margin-top: 16px; }
         .flow svg.lines { position: absolute; inset: 0; width: 100%; height: 100%; }
         .lines path { fill: none; stroke: var(--gw-line); stroke-width: 1.6; transition: stroke 0.4s; }
         .lines path.on-solar { stroke: color-mix(in srgb, var(--gw-solar) 45%, transparent); }
@@ -308,11 +334,17 @@ class GoodweFlowCard extends HTMLElement {
         .dot.d-batt { fill: var(--gw-batt); }
         .dot.d-grid { fill: var(--gw-grid); }
 
+        /* the node box is exactly the bubble, so translate(-50%,-50%) puts the
+           circle centre precisely on the path endpoints; labels hang outside */
         .node {
           position: absolute; transform: translate(-50%, -50%);
-          display: flex; flex-direction: column; align-items: center; gap: 3px;
           cursor: pointer; z-index: 2;
         }
+        .node .node-label {
+          position: absolute; top: calc(100% + 5px); left: 50%;
+          transform: translateX(-50%);
+        }
+        .node.solar .node-label { top: auto; bottom: calc(100% + 5px); }
         .bubble {
           width: 80px; height: 80px;
           width: clamp(72px, 22cqw, 96px); height: clamp(72px, 22cqw, 96px);
@@ -358,7 +390,7 @@ class GoodweFlowCard extends HTMLElement {
         @keyframes pulse { 50% { opacity: 0.35; } }
 
         /* ---- PV strings ---- */
-        .divider { height: 1px; background: var(--gw-line); margin: 14px 2px 0; }
+        .divider { height: 1px; background: var(--gw-line); margin: 30px 2px 0; }
         .strings { display: flex; flex-direction: column; gap: 7px; margin: 12px 2px 0; }
         .string { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .s-name { font-size: 0.74rem; font-weight: 600; color: var(--gw-dim); width: 32px; }
@@ -618,14 +650,27 @@ class GoodweFlowCard extends HTMLElement {
       battCharge >= FLOW_THRESHOLD_W ? `${L.charging} · ${fmtPower(battCharge)}` :
       battDischarge >= FLOW_THRESHOLD_W ? `${L.battery} · ${fmtPower(battDischarge)}` : L.battery;
 
-    // PV strings
+    // power bars (unit-aware: % sensors fill directly, no max needed)
     c.strings.forEach((s, i) => {
       const fill = this.shadowRoot.getElementById(`sfill${i}`);
       const val = this.shadowRoot.getElementById(`sval${i}`);
       if (!fill) return;
-      const w = this._num(s.entity);
-      val.textContent = fmtPower(w);
-      fill.style.width = w === null ? "0%" : `${Math.min(100, (w / (s.max || 4000)) * 100)}%`;
+      const st = this._state(s.entity);
+      const v = st ? num(st.state) : null;
+      const unit = st ? (st.attributes.unit_of_measurement || "").trim() : "";
+      if (unit === "%") {
+        val.textContent = v === null ? "—" : `${Math.round(v)}%`;
+        fill.style.width = v === null ? "0%" : `${Math.min(100, Math.max(0, v))}%`;
+      } else {
+        val.textContent = fmtPower(v);
+        fill.style.width = v === null ? "0%" : `${Math.min(100, (v / (s.max || 4000)) * 100)}%`;
+      }
+    });
+
+    // custom tiles
+    c.tiles.forEach((t, i) => {
+      const el = this.shadowRoot.getElementById(`ctile${i}`);
+      if (el) el.innerHTML = this._fmtState(t.entity);
     });
 
     // stats
