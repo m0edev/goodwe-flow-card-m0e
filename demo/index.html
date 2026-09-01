@@ -44,6 +44,7 @@
       ts: "sensor.symphony_house_goodwe_timestamp",
       fast: "switch.symphony_house_goodwe_fast_charging_switch",
       price: "sensor.symphony_house_amber_express_symphonyhouse_general_price",
+      ups: "sensor.symphony_house_goodwe_backup_load",
     };
 
     const scenarios = {
@@ -77,6 +78,7 @@
       setState(E.prod, prodToday.toFixed(2), "kWh");
       setState(E.battDis, "4.31", "kWh");
       setState(E.price, jitter(current.price, 0.04).toFixed(4), "$/kWh");
+      setState(E.ups, Math.round(jitter(current.house * 0.35)), "W");
       setState(E.ts, new Date().toISOString());
       states[E.fast] = { state: fastOn ? "on" : "off", attributes: {} };
     }
@@ -100,7 +102,6 @@
       battery_capacity_kwh: 1.6,
       entities: {
         pv_power: E.pv,
-        p1_power: E.pv1,
         house_power: E.house,
         battery_power: E.battP,
         battery_soc: E.soc,
@@ -109,7 +110,10 @@
         grid_price: E.price,
         last_update: E.ts,
       },
-      max_input_power: 6600,
+      bars: [
+        { entity: E.pv1, name: "PV", max: 6600 },
+        { entity: E.ups, name: "UPS", max: 2400, color: "#5aa9e6" },
+      ],
       switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
     });
     document.getElementById("mount").appendChild(card);

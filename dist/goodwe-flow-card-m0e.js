@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -111,15 +111,17 @@ class GoodweFlowCard extends HTMLElement {
   /* -------- config -------- */
 
   setConfig(config) {
-    if (!config || (!config.entities && !config.strings)) {
+    if (!config || (!config.entities && !config.strings && !config.bars)) {
       throw new Error("goodwe-flow-card-m0e: define an `entities:` block");
     }
     const e = config.entities || {};
 
-    // strings: new style `strings:` list, or legacy p1..p4 keys
+    // bars: generic labelled power bars ({entity, name, max, color}).
+    // `bars:` is the new name, `strings:` is an alias, legacy p1..p4 keys still work.
     let strings = [];
-    if (Array.isArray(config.strings)) {
-      strings = config.strings.map((s, i) =>
+    const barList = config.bars || config.strings;
+    if (Array.isArray(barList)) {
+      strings = barList.map((s, i) =>
         typeof s === "string"
           ? { entity: s, name: `PV${i + 1}`, max: config.max_string_power || 4000 }
           : { name: `PV${i + 1}`, max: config.max_string_power || 4000, ...s }
@@ -165,8 +167,9 @@ class GoodweFlowCard extends HTMLElement {
       invert_battery: !!config.invert_battery,
       invert_grid: !!config.invert_grid,
       switches: config.switches || config.custom_settings || [],
-      show_strings: config.show_strings !== false,
+      show_strings: config.show_bars !== false && config.show_strings !== false,
       show_stats: config.show_stats !== false,
+      show_separator: config.show_separator !== false,
     };
     this._built = false;
   }
@@ -230,7 +233,7 @@ class GoodweFlowCard extends HTMLElement {
       ? `<div class="strings">${c.strings.map((s, i) => `
           <div class="string" data-entity="${s.entity}">
             <span class="s-name">${s.name}</span>
-            <div class="s-bar"><div class="s-fill" id="sfill${i}"></div></div>
+            <div class="s-bar"><div class="s-fill" id="sfill${i}"${s.color ? ` style="background:${s.color}"` : ""}></div></div>
             <span class="s-val" id="sval${i}">—</span>
           </div>`).join("")}</div>`
       : "";
@@ -355,6 +358,7 @@ class GoodweFlowCard extends HTMLElement {
         @keyframes pulse { 50% { opacity: 0.35; } }
 
         /* ---- PV strings ---- */
+        .divider { height: 1px; background: var(--gw-line); margin: 14px 2px 0; }
         .strings { display: flex; flex-direction: column; gap: 7px; margin: 12px 2px 0; }
         .string { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .s-name { font-size: 0.74rem; font-weight: 600; color: var(--gw-dim); width: 32px; }
@@ -466,6 +470,7 @@ class GoodweFlowCard extends HTMLElement {
           </div>
         </div>
 
+        ${c.show_separator && (stringsHtml || statsHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
         ${stringsHtml}
         ${statsHtml}
         ${switchesHtml}
