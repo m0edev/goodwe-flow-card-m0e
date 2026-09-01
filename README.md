@@ -19,6 +19,9 @@ scenarios.
   pulsing bolt while charging, and remaining kWh if you give it the pack size
 - Grid node automatically labels itself *import* / *export*; if you have no
   grid sensor the card derives grid power from PV, battery and house load
+- Live electricity price inside the grid node (e.g. an Amber Electric price
+  sensor) via `entities.grid_price`
+- Every label on the card is editable via the `labels:` block
 - Per-string PV bars (PV1–PV4) scaled to each string's max power
 - Daily stats row: solar today, battery today, grid in/out today
 - Quick-toggle pills for switches (e.g. GoodWe Fast Charge) — tap to toggle
@@ -59,6 +62,7 @@ entities:
   production_today: sensor.symphony_house_goodwe_today_s_pv_generation
   battery_today: sensor.symphony_house_goodwe_today_battery_discharge
   last_update: sensor.symphony_house_goodwe_timestamp
+  grid_price: sensor.symphony_house_amber_express_symphonyhouse_general_price
   # optional extras if you have them:
   # grid_power: sensor.symphony_house_goodwe_active_power
   # grid_import_today: sensor.symphony_house_goodwe_today_energy_import
@@ -67,6 +71,10 @@ max_input_power: 6600            # scales the PV1 bar
 switches:
   - entity: switch.symphony_house_goodwe_fast_charging_switch
     name: Fast Charge
+labels:            # optional — override any text on the card
+  home: House
+  grid_import: buying
+  grid_export: selling
 ```
 
 ## All options
@@ -82,6 +90,7 @@ switches:
 | `entities.production_today` | — | PV generation today (kWh or Wh) |
 | `entities.battery_today` | — | Battery energy today (kWh or Wh). Legacy alias: `battery_capacity` |
 | `entities.grid_import_today` / `grid_export_today` | — | Optional daily grid stats |
+| `entities.grid_price` | — | Live electricity price shown in the grid node (`$/kWh` or `¢/kWh` sensors, e.g. Amber) |
 | `entities.last_update` | — | Timestamp sensor shown in the header |
 | `entities.p1_power` … `p4_power` | — | Per-string PV sensors (legacy style) |
 | `strings` | — | New-style string list: `[{entity, name, max}]` — overrides `pN_power` |
@@ -91,6 +100,7 @@ switches:
 | `invert_grid` | `false` | Set if import/export show reversed |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
 | `show_strings` / `show_stats` | `true` | Hide the string bars / stats row |
+| `labels` | — | Override any text: `solar`, `home`, `battery`, `grid`, `grid_import`, `grid_export`, `charging`, `today`, `production`, `battery_today`, `grid_in`, `grid_out` |
 
 ### Sign conventions
 

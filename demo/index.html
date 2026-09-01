@@ -43,14 +43,15 @@
       house: "sensor.symphony_house_goodwe_house_consumption",
       ts: "sensor.symphony_house_goodwe_timestamp",
       fast: "switch.symphony_house_goodwe_fast_charging_switch",
+      price: "sensor.symphony_house_amber_express_symphonyhouse_general_price",
     };
 
     const scenarios = {
-      "Sunny day": { pv: 4800, house: 900, batt: -1400, soc: 76 },   // batt charging, exporting
-      "Cloudy": { pv: 620, house: 640, batt: 30, soc: 64 },
-      "Evening": { pv: 0, house: 1150, batt: 1100, soc: 48 },        // battery carrying the house
-      "Night import": { pv: 0, house: 800, batt: 0, soc: 14 },
-      "Fast charge": { pv: 0, house: 600, batt: -3000, soc: 35 },    // grid → battery
+      "Sunny day": { pv: 4800, house: 900, batt: -1400, soc: 76, price: 0.09 },  // batt charging, exporting
+      "Cloudy": { pv: 620, house: 640, batt: 30, soc: 64, price: 0.24 },
+      "Evening": { pv: 0, house: 1150, batt: 1100, soc: 48, price: 0.47 },        // battery carrying the house
+      "Night import": { pv: 0, house: 800, batt: 0, soc: 14, price: 0.21 },
+      "Fast charge": { pv: 0, house: 600, batt: -3000, soc: 35, price: 0.12 },    // grid → battery
     };
     let current = { ...scenarios["Sunny day"] };
     let fastOn = false;
@@ -75,6 +76,7 @@
       setState(E.soc, Math.round(current.soc), "%");
       setState(E.prod, prodToday.toFixed(2), "kWh");
       setState(E.battDis, "4.31", "kWh");
+      setState(E.price, jitter(current.price, 0.04).toFixed(4), "$/kWh");
       setState(E.ts, new Date().toISOString());
       states[E.fast] = { state: fastOn ? "on" : "off", attributes: {} };
     }
@@ -104,6 +106,7 @@
         battery_soc: E.soc,
         production_today: E.prod,
         battery_today: E.battDis,
+        grid_price: E.price,
         last_update: E.ts,
       },
       max_input_power: 6600,

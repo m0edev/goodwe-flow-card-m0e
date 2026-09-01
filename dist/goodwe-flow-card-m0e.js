@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -50,6 +50,14 @@ const energyHtml = (v, unit) => {
   const s = fmtEnergy(v, unit);
   const m = s.match(/^([\d.]+) (\w+)$/);
   return m ? `${m[1]}<span class="u">${m[2]}</span>` : s;
+};
+
+// electricity price, e.g. Amber's $/kWh sensors → "$0.32/kWh", "22¢/kWh"
+const fmtPrice = (v, unit) => {
+  if (v === null) return "";
+  if (unit.includes("$")) return `${v < 0 ? "-" : ""}$${Math.abs(v).toFixed(2)}/kWh`;
+  if (/¢|c\//i.test(unit)) return `${Math.round(v)}¢/kWh`;
+  return `${v} ${unit}`;
 };
 
 // quantize animation duration so we don't restart the dot every update
@@ -135,7 +143,23 @@ class GoodweFlowCard extends HTMLElement {
       battery_today: e.battery_today || e.battery_capacity,
       grid_import_today: e.grid_import_today,
       grid_export_today: e.grid_export_today,
+      grid_price: e.grid_price,
       last_update: e.last_update,
+      labels: {
+        solar: "Solar",
+        home: "Home",
+        battery: "Battery",
+        grid: "Grid",
+        grid_import: "import",
+        grid_export: "export",
+        charging: "Charging",
+        today: "Today",
+        production: "Production",
+        battery_today: "Battery",
+        grid_in: "Grid in",
+        grid_out: "Grid out",
+        ...(config.labels || {}),
+      },
       strings,
       battery_capacity_kwh: num(config.battery_capacity_kwh),
       invert_battery: !!config.invert_battery,
@@ -218,12 +242,13 @@ class GoodweFlowCard extends HTMLElement {
           <span class="stat-val" id="${valId}">—</span>
           ${icon(ic, icCls)}
         </div>`;
+    const L = c.labels;
     const statsHtml = c.show_stats ? `
       <div class="stats">
-        ${c.production_today ? tile(c.production_today, "Production", "Today", "prodToday", "chart", "solar") : ""}
-        ${c.battery_today ? tile(c.battery_today, "Battery", "Today", "battToday", "battery", "batt") : ""}
-        ${c.grid_import_today ? tile(c.grid_import_today, "Grid in", "Today", "gridInToday", "grid", "grid") : ""}
-        ${c.grid_export_today ? tile(c.grid_export_today, "Grid out", "Today", "gridOutToday", "grid", "grid") : ""}
+        ${c.production_today ? tile(c.production_today, L.production, L.today, "prodToday", "chart", "solar") : ""}
+        ${c.battery_today ? tile(c.battery_today, L.battery_today, L.today, "battToday", "battery", "batt") : ""}
+        ${c.grid_import_today ? tile(c.grid_import_today, L.grid_in, L.today, "gridInToday", "grid", "grid") : ""}
+        ${c.grid_export_today ? tile(c.grid_export_today, L.grid_out, L.today, "gridOutToday", "grid", "grid") : ""}
       </div>` : "";
 
     const switchesHtml = c.switches.length ? `
@@ -408,7 +433,7 @@ class GoodweFlowCard extends HTMLElement {
           </svg>
 
           <div class="node solar" style="left:50%; top:15.3%" data-entity="${c.pv_power || ""}">
-            <span class="node-label">Solar</span>
+            <span class="node-label">${L.solar}</span>
             <div class="bubble">${icon("sun")}<span class="node-val" id="pvVal">—</span></div>
           </div>
 
@@ -423,17 +448,21 @@ class GoodweFlowCard extends HTMLElement {
               <span class="node-val" id="socVal">—</span>
               <span class="node-sub" id="battKwh"></span>
             </div>
-            <span class="node-label" id="battLabel">Battery</span>
+            <span class="node-label" id="battLabel">${L.battery}</span>
           </div>
 
           <div class="node house" style="left:81.4%; top:56%" data-entity="${c.house_power || ""}">
             <div class="bubble">${icon("home")}<span class="node-val" id="houseVal">—</span></div>
-            <span class="node-label">Home</span>
+            <span class="node-label">${L.home}</span>
           </div>
 
-          <div class="node grid" style="left:50%; top:87.3%" data-entity="${c.grid_power || ""}">
-            <div class="bubble">${icon("grid")}<span class="node-val" id="gridVal">—</span></div>
-            <span class="node-label" id="gridLabel">Grid</span>
+          <div class="node grid" style="left:50%; top:87.3%" data-entity="${c.grid_price || c.grid_power || ""}">
+            <div class="bubble">
+              ${icon("grid")}
+              <span class="node-val" id="gridVal">—</span>
+              ${c.grid_price ? `<span class="node-sub" id="gridPrice"></span>` : ""}
+            </div>
+            <span class="node-label" id="gridLabel">${L.grid}</span>
           </div>
         </div>
 
@@ -447,7 +476,7 @@ class GoodweFlowCard extends HTMLElement {
     const $ = (id) => this.shadowRoot.getElementById(id);
     this._refs = {
       updated: $("updated"),
-      pvVal: $("pvVal"), houseVal: $("houseVal"), gridVal: $("gridVal"),
+      pvVal: $("pvVal"), houseVal: $("houseVal"), gridVal: $("gridVal"), gridPrice: $("gridPrice"),
       socVal: $("socVal"), socArc: $("socArc"), battKwh: $("battKwh"),
       battLabel: $("battLabel"), gridLabel: $("gridLabel"),
       prodToday: $("prodToday"), battToday: $("battToday"),
@@ -542,15 +571,22 @@ class GoodweFlowCard extends HTMLElement {
     r.houseNode.classList.toggle("active-house", house >= FLOW_THRESHOLD_W);
 
     // grid node
+    const L = c.labels;
     if (gridImport >= FLOW_THRESHOLD_W) {
       r.gridVal.innerHTML = powerHtml(gridImport);
-      r.gridLabel.textContent = "Grid · import";
+      r.gridLabel.textContent = `${L.grid} · ${L.grid_import}`;
     } else if (gridExport >= FLOW_THRESHOLD_W) {
       r.gridVal.innerHTML = powerHtml(gridExport);
-      r.gridLabel.textContent = "Grid · export";
+      r.gridLabel.textContent = `${L.grid} · ${L.grid_export}`;
     } else {
       r.gridVal.innerHTML = `0<span class="u">W</span>`;
-      r.gridLabel.textContent = "Grid";
+      r.gridLabel.textContent = L.grid;
+    }
+    if (r.gridPrice) {
+      const priceSt = this._state(c.grid_price);
+      r.gridPrice.textContent = priceSt
+        ? fmtPrice(num(priceSt.state), priceSt.attributes.unit_of_measurement || "")
+        : "";
     }
     r.gridNode.classList.toggle("active-grid", gridImport >= FLOW_THRESHOLD_W || gridExport >= FLOW_THRESHOLD_W);
 
@@ -574,8 +610,8 @@ class GoodweFlowCard extends HTMLElement {
     r.battNode.classList.toggle("active-batt", battActive);
     r.battNode.classList.toggle("charging", battCharge >= FLOW_THRESHOLD_W);
     r.battLabel.textContent =
-      battCharge >= FLOW_THRESHOLD_W ? `Charging · ${fmtPower(battCharge)}` :
-      battDischarge >= FLOW_THRESHOLD_W ? `Battery · ${fmtPower(battDischarge)}` : "Battery";
+      battCharge >= FLOW_THRESHOLD_W ? `${L.charging} · ${fmtPower(battCharge)}` :
+      battDischarge >= FLOW_THRESHOLD_W ? `${L.battery} · ${fmtPower(battDischarge)}` : L.battery;
 
     // PV strings
     c.strings.forEach((s, i) => {
