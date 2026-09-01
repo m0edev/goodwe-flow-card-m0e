@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -52,11 +52,14 @@ const energyHtml = (v, unit) => {
   return m ? `${m[1]}<span class="u">${m[2]}</span>` : s;
 };
 
-// electricity price, e.g. Amber's $/kWh sensors → "$0.32/kWh", "22¢/kWh"
+// money-ish units: "$/kWh" → "$0.32/kWh", "¢/kWh" → "22¢/kWh",
+// plain "$"/"AUD" (cost sensors) → "$4.31", "$/h" → "$0.24/h"
 const fmtPrice = (v, unit) => {
   if (v === null) return "";
-  if (unit.includes("$")) return `${v < 0 ? "-" : ""}$${Math.abs(v).toFixed(2)}/kWh`;
-  if (/¢|c\//i.test(unit)) return `${Math.round(v)}¢/kWh`;
+  const denom = unit.includes("/") ? unit.slice(unit.indexOf("/")) : "";
+  if (unit.includes("$") || /^[A-Z]{3}(\/|$)/.test(unit))
+    return `${v < 0 ? "-" : ""}$${Math.abs(v).toFixed(2)}${denom}`;
+  if (/¢|c\//i.test(unit)) return `${Math.round(v)}¢${denom || "/kWh"}`;
   return `${v} ${unit}`;
 };
 
@@ -227,7 +230,7 @@ class GoodweFlowCard extends HTMLElement {
     if (v === null) return st.state;
     if (unit === "%") return `${Math.round(v)}<span class="u">%</span>`;
     if (unit === "W" || unit === "kW") return powerHtml(unit === "kW" ? v * 1000 : v);
-    if (unit.includes("$") || unit.includes("¢")) {
+    if (unit.includes("$") || unit.includes("¢") || /^[A-Z]{3}(\/|$)/.test(unit)) {
       const p = fmtPrice(v, unit);
       const ix = p.indexOf("/");
       return ix > 0 ? `${p.slice(0, ix)}<span class="u">${p.slice(ix)}</span>` : p;
