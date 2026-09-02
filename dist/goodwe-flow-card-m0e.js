@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.13.0";
+const CARD_VERSION = "1.13.1";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -536,8 +536,8 @@ class GoodweFlowCard extends HTMLElement {
           min-width: 0;
         }
         .stat .gw-ic {
-          position: absolute; right: 12px; bottom: 12px;
-          width: 20px; height: 20px; color: var(--gw-dim); opacity: 0.8;
+          position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+          width: 24px; height: 24px; color: var(--gw-dim); opacity: 0.85;
         }
         .gw-ic.solar { color: var(--gw-solar); }
         .gw-ic.batt { color: var(--gw-batt); }
