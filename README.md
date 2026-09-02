@@ -128,7 +128,7 @@ labels:            # optional — override any text on the card
 | `battery_min_soc` | `0` | Discharge floor (%); time-to-empty counts down to this instead of 0 |
 | `invert_battery` | `false` | Set if charging/discharging show reversed |
 | `invert_grid` | `false` | Set if import/export show reversed |
-| `info` | — | Compact label/value rows: `[{entity, name, format}]`; `format: duration` renders a seconds sensor as `5h 03m` |
+| `info` | — | Compact label/value rows: `[{entity, name, format, icon, color}]` — `icon` shows before the label, `color` tints the icon and value; `format: duration` renders a seconds sensor as `5h 03m` |
 | `alert_states` / `ok_states` | — | On any tile or info row: flash red while the state matches `alert_states`, or while it does NOT match `ok_states` (case-insensitive) |
 | `tile_columns` | `2` | Columns in the stat-tile grid (1-4) |
 | `info_columns` | `1` | Columns in the info list (1-4) |

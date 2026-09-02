@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.15.1";
+const CARD_VERSION = "1.16.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -389,8 +389,8 @@ class GoodweFlowCard extends HTMLElement {
         ? `display:grid;grid-template-columns:repeat(${c.info_columns},minmax(0,1fr));column-gap:28px;`
         : ""}">${c.info.map((t, i) => `
         <div class="irow${i >= c.info.length - lastRow ? " no-b" : ""}" data-entity="${t.entity}">
-          <span class="i-name">${t.name || t.entity}</span>
-          <span class="i-val" id="info${i}">—</span>
+          <span class="i-name">${t.icon ? icon(t.icon, "", t.color ? `color:${t.color}` : "") : ""}${t.name || t.entity}</span>
+          <span class="i-val" id="info${i}"${t.color ? ` style="color:${t.color}"` : ""}>—</span>
         </div>`).join("")}</div>` : "";
 
     const buttonsHtml = c.buttons.map((g, gi) => `
@@ -567,8 +567,11 @@ class GoodweFlowCard extends HTMLElement {
         .stat {
           position: relative; display: flex; flex-direction: column; gap: 2px;
           background: var(--gw-tile); border-radius: 14px; padding: 13px 14px 12px; cursor: pointer;
-          min-width: 0;
+          min-width: 0; border: 1px solid rgba(255, 255, 255, 0.035);
+          transition: transform 0.12s;
         }
+        .stat:active, .switch:active, .pbtn:active { transform: scale(0.975); }
+        .stat, .switch, .pbtn, .irow { -webkit-tap-highlight-color: transparent; }
         .stat .stat-tr { display: flex; align-items: center; gap: 7px; }
         .stat .gw-ic { width: 18px; height: 18px; color: var(--gw-dim); opacity: 0.9; }
         .gw-ic.solar { color: var(--gw-solar); }
@@ -589,15 +592,21 @@ class GoodweFlowCard extends HTMLElement {
         /* ---- info list (compact label/value rows) ---- */
         .info {
           background: var(--gw-tile); border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.035);
           padding: 3px 14px; margin-top: 10px;
         }
         .irow {
           display: flex; justify-content: space-between; align-items: baseline;
-          gap: 12px; padding: 9px 0; cursor: pointer;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          gap: 12px; padding: 9px 8px; margin-inline: -8px; border-radius: 8px;
+          cursor: pointer; border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
-        .irow:last-child, .irow.no-b { border-bottom: none; }
-        .i-name { font-size: 0.78rem; color: var(--gw-dim); white-space: nowrap; }
+        .irow:hover { background: rgba(255, 255, 255, 0.04); }
+        .irow:last-child, .irow.no-b { border-bottom: 1px solid transparent; }
+        .i-name {
+          display: flex; align-items: center; gap: 7px;
+          font-size: 0.78rem; color: var(--gw-dim); white-space: nowrap;
+        }
+        .irow .gw-ic { width: 14px; height: 14px; color: var(--gw-dim); flex: none; opacity: 0.9; }
         .i-val {
           font-size: 0.82rem; font-weight: 700; text-align: right;
           font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis;
@@ -611,24 +620,23 @@ class GoodweFlowCard extends HTMLElement {
         }
         .stat.flash { animation: gwflash 1.1s ease-in-out infinite; }
         .stat.flash .stat-val, .stat.flash .gw-ic { color: #ff6b6b !important; }
-        .irow.flash {
-          animation: gwflash 1.1s ease-in-out infinite;
-          border-radius: 8px; padding-inline: 8px; margin-inline: -8px;
-        }
+        .irow.flash { animation: gwflash 1.1s ease-in-out infinite; }
         .irow.flash .i-val { color: #ff6b6b; }
 
         /* ---- preset buttons ---- */
         .btns { margin-top: 12px; }
-        .btns-title {
-          font-size: 0.78rem; font-weight: 700; margin: 0 2px 7px;
+        .btns-title, .info-title {
+          font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.09em; color: var(--gw-dim); margin: 14px 2px 8px;
         }
-        .btns-cur { color: var(--gw-dim); font-weight: 600; }
+        .btns-title { margin-top: 2px; }
+        .btns-cur { color: var(--gw-text); font-weight: 700; }
         .btn-grid { display: grid; gap: 8px; }
         .pbtn {
           background: var(--gw-tile); border-radius: 12px; padding: 11px 6px;
           display: flex; flex-direction: column; align-items: center; gap: 6px;
-          cursor: pointer; border: 1.5px solid transparent;
-          transition: border-color 0.2s, background 0.2s;
+          cursor: pointer; border: 1.5px solid rgba(255, 255, 255, 0.035);
+          transition: border-color 0.2s, background 0.2s, transform 0.12s;
         }
         .pbtn .gw-ic { width: 16px; height: 16px; color: var(--gw-dim); }
         .pbtn-l { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -638,15 +646,13 @@ class GoodweFlowCard extends HTMLElement {
         }
         .pbtn.on .gw-ic { color: var(--gw-solar); }
 
-        /* ---- section title above the info list ---- */
-        .info-title { font-size: 0.78rem; font-weight: 700; margin: 12px 2px -4px; }
-
         /* ---- switches ---- */
         .switches { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .switch {
           display: flex; align-items: center; gap: 11px;
           background: var(--gw-tile); border-radius: 14px; padding: 13px 14px; cursor: pointer;
-          transition: background 0.3s;
+          border: 1px solid rgba(255, 255, 255, 0.035);
+          transition: background 0.3s, transform 0.12s;
         }
         .switch .gw-ic { width: 20px; height: 20px; color: var(--gw-dim); transition: color 0.3s; }
         .switch.on .gw-ic { color: var(--gw-batt); }

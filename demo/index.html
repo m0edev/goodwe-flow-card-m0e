@@ -135,10 +135,10 @@
       info_title: "System",
       info_columns: 2,
       info: [
-        { entity: E.acv, name: "AC In" },
-        { entity: E.ttg, name: "Time Left", format: "duration" },
-        { entity: E.alarms, name: "Alarms", ok_states: ["OK"] },
-        { entity: E.soc, name: "Battery SOC" },
+        { entity: E.acv, name: "AC In", icon: "bolt" },
+        { entity: E.ttg, name: "Time Left", format: "duration", icon: "clock", color: "#35d49a" },
+        { entity: E.alarms, name: "Alarms", ok_states: ["OK"], icon: "bell" },
+        { entity: E.soc, name: "Battery SOC", icon: "battery" },
       ],
       buttons: [{
         entity: E.setpoint,
