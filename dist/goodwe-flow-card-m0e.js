@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.17.0";
+const CARD_VERSION = "1.17.1";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -211,6 +211,7 @@ class GoodweFlowCard extends HTMLElement {
       strings,
       battery_capacity_kwh: num(config.battery_capacity_kwh),
       pv_max: num(config.pv_max),
+      soc_precision: Math.min(2, Math.max(0, num(config.soc_precision) ?? 0)),
       house_max: num(config.house_max),
       battery_min_soc: num(config.battery_min_soc) ?? 0,
       invert_battery: !!config.invert_battery,
@@ -961,7 +962,7 @@ class GoodweFlowCard extends HTMLElement {
     const soc = this._num(c.battery_soc);
     const circumference = 238.76;
     if (soc !== null) {
-      r.socVal.innerHTML = `${Math.round(soc)}<span class="u">%</span>`;
+      r.socVal.innerHTML = `${soc.toFixed(c.soc_precision)}<span class="u">%</span>`;
       r.socArc.style.strokeDashoffset = circumference * (1 - Math.min(soc, 100) / 100);
       const color = soc < 20 ? "var(--gw-batt-low)" : soc < 45 ? "var(--gw-batt-mid)" : "var(--gw-batt)";
       r.socArc.style.stroke = color;

@@ -126,6 +126,7 @@ labels:            # optional — override any text on the card
 | `max_input_power` … `max_input_power4` | `4000` | Max W per string, scales its bar |
 | `pv_max` / `house_max` | — | Adds a power ring around the Solar / Home node, filled by current watts against this max (like the battery SOC ring) |
 | `battery_capacity_kwh` | — | Usable pack size; enables the kWh readout and the time-to-full/empty estimate |
+| `soc_precision` | `0` | Decimal places for the SOC readout in the battery ring (0-2) |
 | `battery_min_soc` | `0` | Discharge floor (%); time-to-empty counts down to this instead of 0 |
 | `invert_battery` | `false` | Set if charging/discharging show reversed |
 | `invert_grid` | `false` | Set if import/export show reversed |
