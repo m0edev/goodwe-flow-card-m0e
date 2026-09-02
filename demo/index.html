@@ -49,6 +49,9 @@
       ttg: "sensor.demo_time_to_go",
       alarms: "sensor.demo_alarms",
       setpoint: "number.demo_grid_setpoint",
+      timerTog: "input_boolean.fast_charge_timer_enabled",
+      timerStart: "input_datetime.fast_charge_start",
+      timerEnd: "input_datetime.fast_charge_end",
       earned: "sensor.grid_earnings_today",
       spent: "sensor.grid_cost_today",
     };
@@ -64,6 +67,7 @@
     let fastOn = false;
     let prodToday = 16.0;
     let setpoint = 50;
+    let timerOn = false;
 
     const states = {};
     const setState = (id, state, unit, device_class) => {
@@ -90,6 +94,9 @@
       setState(E.ttg, Math.round(19000 + Math.random() * 100), "s");
       setState(E.alarms, current.alarm || "OK", "");
       setState(E.setpoint, setpoint, "W");
+      states[E.timerTog] = { state: timerOn ? "on" : "off", attributes: {} };
+      setState(E.timerStart, "2026-08-29 02:00:00", "");
+      setState(E.timerEnd, "2026-08-29 04:00:00", "");
       setState(E.earned, (3.42 + Math.random() * 0.02).toFixed(2), "$");
       setState(E.spent, (1.17 + Math.random() * 0.01).toFixed(2), "$");
       setState(E.ts, new Date().toISOString());
@@ -100,6 +107,7 @@
       get states() { return states; },
       callService(domain, service, data) {
         if (service === "set_value") { setpoint = data.value; push(); return; }
+        if (data.entity_id === E.timerTog) { timerOn = !timerOn; push(); return; }
         if (data.entity_id === E.fast) {
           fastOn = !fastOn;
           if (fastOn) applyScenario("Fast charge"); else applyScenario("Sunny day");
@@ -147,6 +155,13 @@
         name: "Grid Setpoint",
         columns: 3,
         options: [20, 50, 150, 500, 700, 1000],
+      }],
+      timers: [{
+        title: "Timer Controls",
+        name: "Charge Timer",
+        toggle: E.timerTog,
+        start: E.timerStart,
+        end: E.timerEnd,
       }],
       switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
     });

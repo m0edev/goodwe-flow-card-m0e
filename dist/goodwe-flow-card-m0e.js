@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.17.1";
+const CARD_VERSION = "1.18.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -85,6 +85,15 @@ const fmtDuration = (secs) => {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ${String(m % 60).padStart(2, "0")}m`;
   return `${Math.floor(h / 24)}d ${h % 24}h`;
+};
+
+// input_datetime / timestamp state → "29 Aug 02:00" (or "02:00" time-only)
+const fmtDT = (str, timeOnly = false) => {
+  if (!str) return "—";
+  const d = new Date(String(str).replace(" ", "T"));
+  if (isNaN(d)) return String(str);
+  const t = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  return timeOnly ? t : `${d.toLocaleDateString([], { day: "numeric", month: "short" })} ${t}`;
 };
 
 // battery ETA: hours from now → "~2:40 pm", rounded to 5 min so power
@@ -202,6 +211,8 @@ class GoodweFlowCard extends HTMLElement {
         empty: "Empty",
         updated: "updated",
         today: "Today",
+        enabled: "Enabled",
+        disabled: "Disabled",
         production: "Production",
         battery_today: "Battery",
         grid_in: "Grid in",
@@ -223,6 +234,7 @@ class GoodweFlowCard extends HTMLElement {
       info: (Array.isArray(config.info) ? config.info : []).map((t) => ({
         ...t, _alert: listify(t.alert_states), _ok: listify(t.ok_states),
       })),
+      timers: Array.isArray(config.timers) ? config.timers : [],
       buttons: (Array.isArray(config.buttons) ? config.buttons : []).map((g) => ({
         ...g,
         columns: Math.min(6, Math.max(1, num(g.columns) ?? 3)),
@@ -253,6 +265,7 @@ class GoodweFlowCard extends HTMLElement {
       ...cc.info.map((t) => t.entity),
       ...cc.switches.map((s) => s.entity),
       ...cc.buttons.map((g) => g.entity),
+      ...cc.timers.flatMap((t) => [t.toggle, t.start, t.end]),
     ].filter(Boolean);
   }
 
@@ -322,6 +335,16 @@ class GoodweFlowCard extends HTMLElement {
     }
     if (/wh$/i.test(unit)) return energyHtml(v, unit);
     return `${st.state}${unit ? `<span class="u">${unit}</span>` : ""}`;
+  }
+
+  // per-row/tile format option: duration, datetime, time — else unit-based
+  _fmtByFormat(t) {
+    if (t.format === "duration") return fmtDuration(this._num(t.entity));
+    if (t.format === "datetime" || t.format === "time") {
+      const st = this._state(t.entity);
+      return st ? fmtDT(st.state, t.format === "time") : "—";
+    }
+    return this._fmtState(t.entity);
   }
 
   _moreInfo(entityId) {
@@ -395,6 +418,27 @@ class GoodweFlowCard extends HTMLElement {
           <span class="i-name">${t.icon ? icon(t.icon, "", t.color ? `color:${t.color}` : "") : ""}${t.name || t.entity}</span>
           <span class="i-val" id="info${i}"${t.color ? ` style="color:${t.color}"` : ""}>—</span>
         </div>`).join("")}</div>` : "";
+
+    const timersHtml = c.timers.map((t, ti) => `
+      ${t.title ? `<div class="info-title">${t.title}</div>` : ""}
+      <div class="switch timer-pill" id="tmr${ti}" data-entity="${t.toggle || ""}">
+        ${icon(t.icon || "clock")}
+        <div class="tmr-txt">
+          <span class="sw-name" id="tmrName${ti}">${t.name || "Timer"}</span>
+          <span class="tmr-sub" id="tmrSub${ti}"></span>
+        </div>
+        ${t.toggle ? `<span class="sw-toggle"><span class="sw-knob"></span></span>` : ""}
+      </div>
+      <div class="tmr-grid">
+        <div class="tmr-tile" data-entity="${t.start || ""}">
+          ${icon("clock")}
+          <div><span class="tmr-lbl">${t.start_name || "Start"}</span><span class="tmr-val" id="tmrS${ti}">—</span></div>
+        </div>
+        <div class="tmr-tile" data-entity="${t.end || ""}">
+          ${icon("clock")}
+          <div><span class="tmr-lbl">${t.end_name || "End"}</span><span class="tmr-val" id="tmrE${ti}">—</span></div>
+        </div>
+      </div>`).join("");
 
     const buttonsHtml = c.buttons.map((g, gi) => `
       <div class="btns">
@@ -631,6 +675,23 @@ class GoodweFlowCard extends HTMLElement {
         .irow.flash { animation: gwflash 1.1s ease-in-out infinite; }
         .irow.flash .i-val { color: #ff6b6b; }
 
+        /* ---- timers (toggle pill + start/end time tiles) ---- */
+        .timer-pill { margin-top: 10px; }
+        .timer-pill .tmr-txt { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .tmr-sub { font-size: 0.72rem; color: var(--gw-dim); font-variant-numeric: tabular-nums; }
+        .timer-pill.on .gw-ic { color: var(--gw-batt); }
+        .tmr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .tmr-tile {
+          display: flex; align-items: center; gap: 10px;
+          background: var(--gw-tile); border: 1px solid rgba(255, 255, 255, 0.035);
+          border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: transform 0.12s;
+        }
+        .tmr-tile:active { transform: scale(0.975); }
+        .tmr-tile .gw-ic { width: 16px; height: 16px; color: var(--gw-batt); flex: none; }
+        .tmr-tile > div { display: flex; flex-direction: column; min-width: 0; }
+        .tmr-lbl { font-size: 0.68rem; color: var(--gw-dim); }
+        .tmr-val { font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
         /* ---- preset buttons ---- */
         .btns { margin-top: 12px; }
         .btns-title, .info-title {
@@ -751,11 +812,12 @@ class GoodweFlowCard extends HTMLElement {
         </div>
 
         <div class="side">
-          ${c.show_separator && (stringsHtml || statsHtml || infoHtml || buttonsHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
+          ${c.show_separator && (stringsHtml || statsHtml || infoHtml || buttonsHtml || timersHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
           ${stringsHtml}
           ${statsHtml}
           ${infoHtml}
           ${buttonsHtml}
+          ${timersHtml}
           ${switchesHtml}
         </div>
         </div>
@@ -780,7 +842,7 @@ class GoodweFlowCard extends HTMLElement {
     this._durCache = {};
 
     // node + tile taps → more-info
-    this.shadowRoot.querySelectorAll(".node, .stat, .string, .irow").forEach((el) => {
+    this.shadowRoot.querySelectorAll(".node, .stat, .string, .irow, .tmr-tile").forEach((el) => {
       el.addEventListener("click", () => this._moreInfo(el.dataset.entity));
     });
 
@@ -1017,7 +1079,7 @@ class GoodweFlowCard extends HTMLElement {
     c.tiles.forEach((t, i) => {
       const el = this.shadowRoot.getElementById(`ctile${i}`);
       if (!el) return;
-      el.innerHTML = this._fmtState(t.entity);
+      el.innerHTML = this._fmtByFormat(t);
       const el2 = this.shadowRoot.getElementById(`ctile2${i}`);
       if (el2) el2.innerHTML = this._fmtState(t.entity2);
       const st = this._state(t.entity);
@@ -1028,9 +1090,7 @@ class GoodweFlowCard extends HTMLElement {
     c.info.forEach((t, i) => {
       const el = this.shadowRoot.getElementById(`info${i}`);
       if (!el) return;
-      el.innerHTML = t.format === "duration"
-        ? fmtDuration(this._num(t.entity))
-        : this._fmtState(t.entity);
+      el.innerHTML = this._fmtByFormat(t);
       const st = this._state(t.entity);
       el.parentElement.classList.toggle("flash", isAlert(t, st && st.state));
     });
@@ -1049,6 +1109,33 @@ class GoodweFlowCard extends HTMLElement {
         ? lu.state
         : `${L.updated} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
     }
+
+    // timers: pill state + window line + start/end tiles
+    c.timers.forEach((t, ti) => {
+      const pill = this.shadowRoot.getElementById(`tmr${ti}`);
+      if (!pill) return;
+      const tog = t.toggle ? this._hass.states[t.toggle] : null;
+      const on = !!tog && tog.state === "on";
+      pill.classList.toggle("on", on);
+      pill.classList.toggle("unavail", !!t.toggle && (!tog || tog.state === "unavailable"));
+      const nameEl = this.shadowRoot.getElementById(`tmrName${ti}`);
+      if (nameEl && t.toggle) {
+        nameEl.textContent = `${t.name || "Timer"} ${on ? L.enabled : L.disabled}`;
+      }
+      const sSt = this._state(t.start);
+      const eSt = this._state(t.end);
+      const sub = this.shadowRoot.getElementById(`tmrSub${ti}`);
+      if (sub) {
+        const oneDay = sSt && eSt &&
+          String(sSt.state).slice(0, 10) === String(eSt.state).slice(0, 10);
+        sub.textContent = sSt && eSt
+          ? `${fmtDT(sSt.state)} → ${fmtDT(eSt.state, oneDay)}` : "";
+      }
+      const sEl = this.shadowRoot.getElementById(`tmrS${ti}`);
+      if (sEl) sEl.textContent = fmtDT(sSt && sSt.state);
+      const eEl = this.shadowRoot.getElementById(`tmrE${ti}`);
+      if (eEl) eEl.textContent = fmtDT(eSt && eSt.state);
+    });
 
     // preset buttons: highlight the active option, label numbers with the unit
     c.buttons.forEach((g, gi) => {

@@ -37,6 +37,8 @@ scenarios.
   until the state recovers
 - Compact info list (`info:`) for small readings — voltages, currents, states,
   alarms — as label/value rows, with `format: duration` for seconds sensors
+- Charge-timer sections (`timers:`) — a toggle pill showing the enabled state
+  and time window, plus tappable Start/End tiles that open HA's time picker
 - Preset button grids (`buttons:`) for number/select entities — e.g. an ESS
   grid-setpoint pad; the active preset highlights, tap to set
 - Quick-toggle pills for switches (e.g. GoodWe Fast Charge) — tap to toggle
@@ -130,10 +132,11 @@ labels:            # optional — override any text on the card
 | `battery_min_soc` | `0` | Discharge floor (%); time-to-empty counts down to this instead of 0 |
 | `invert_battery` | `false` | Set if charging/discharging show reversed |
 | `invert_grid` | `false` | Set if import/export show reversed |
-| `info` | — | Compact label/value rows: `[{entity, name, format, icon, color}]` — `icon` shows before the label, `color` tints the icon and value; `format: duration` renders a seconds sensor as `5h 03m` |
+| `info` | — | Compact label/value rows: `[{entity, name, format, icon, color}]` — `icon` shows before the label, `color` tints the icon and value; `format:` renders `duration` (seconds → `5h 03m`), `datetime` (`29 Aug 02:00`) or `time` (`02:00`); also works on tiles |
 | `alert_states` / `ok_states` | — | On any tile or info row: flash red while the state matches `alert_states`, or while it does NOT match `ok_states` (case-insensitive) |
 | `tile_columns` | `2` | Columns in the stat-tile grid (1-4) |
 | `info_columns` | `1` | Columns in the info list (1-4) |
+| `timers` | — | Timer sections: `[{toggle, name, start, end, title, icon, start_name, end_name}]` — `toggle` is an `input_boolean`, `start`/`end` are `input_datetime`s; the pill shows "Name Enabled/Disabled" and the window, tiles open the picker |
 | `buttons` | — | Preset grids: `[{entity, name, icon, columns, options: [20, 50, {value: 700, label: Boost}]}]`. Tap calls `number.set_value` / `select.select_option`; active option highlights. Numeric labels get the entity's unit |
 | `info_title` | — | Section heading shown above the info list |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]` — works for `switch`, `input_boolean` and `automation` entities. Legacy alias: `custom_settings` |
