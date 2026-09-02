@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.8.1";
+const CARD_VERSION = "1.9.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -114,6 +114,14 @@ const ICONS = {
     <rect x="10.7" y="7" width="3" height="11" rx="0.8" stroke="none" fill="currentColor"/>
     <rect x="14.9" y="10" width="3" height="8" rx="0.8" stroke="none" fill="currentColor"/>`,
   bolt: `<path d="M13.5 3 L6.5 13.5 H11 L9.5 21 L17.5 10 H12.5 Z" stroke-linejoin="round" fill="none"/>`,
+  clock: `<circle cx="12" cy="12" r="8.5" fill="none"/>
+    <path d="M12 7.5 V12 L15.2 14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+  bell: `<path d="M6.2 17 H17.8 L16.7 15.4 C16.2 14.7 16 13.9 16 13 V10.5 C16 8 14.2 6 12 6 C9.8 6 8 8 8 10.5 V13 C8 13.9 7.8 14.7 7.3 15.4 Z" fill="none" stroke-linejoin="round"/>
+    <path d="M10.4 19.3 a1.7 1.7 0 0 0 3.2 0" fill="none" stroke-linecap="round"/>
+    <line x1="12" y1="4" x2="12" y2="6" stroke-linecap="round"/>`,
+  thermo: `<path d="M10.4 5.2 a1.6 1.6 0 0 1 3.2 0 V13.1 a3.6 3.6 0 1 1 -3.2 0 Z" fill="none" stroke-linejoin="round"/>
+    <circle cx="12" cy="16.3" r="1.5" fill="currentColor" stroke="none"/>
+    <line x1="12" y1="13.5" x2="12" y2="15" stroke-linecap="round"/>`,
 };
 
 const icon = (name, cls = "", style = "") =>
