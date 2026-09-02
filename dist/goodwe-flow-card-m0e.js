@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.13.1";
+const CARD_VERSION = "1.13.2";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
