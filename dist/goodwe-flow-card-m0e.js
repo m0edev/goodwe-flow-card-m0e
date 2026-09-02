@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.10.0";
+const CARD_VERSION = "1.11.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -425,11 +425,19 @@ class GoodweFlowCard extends HTMLElement {
         .lines path.on-solar { stroke: color-mix(in srgb, var(--gw-solar) 45%, transparent); }
         .lines path.on-batt { stroke: color-mix(in srgb, var(--gw-batt) 45%, transparent); }
         .lines path.on-grid { stroke: color-mix(in srgb, var(--gw-grid) 45%, transparent); }
-        .dot { visibility: hidden; }
-        .dot.live { visibility: visible; }
-        .dot.d-solar { fill: var(--gw-solar); }
-        .dot.d-batt { fill: var(--gw-batt); }
-        .dot.d-grid { fill: var(--gw-grid); }
+        /* flow dots: HTML divs on GPU-composited transform keyframes
+           (generated per card size) — SMIL ran on the main thread and
+           stuttered on slow tablets */
+        .dotv {
+          position: absolute; left: -4.5px; top: -4.5px; width: 9px; height: 9px;
+          border-radius: 50%; visibility: hidden; pointer-events: none; z-index: 1;
+          will-change: transform;
+          animation: 4s linear infinite; animation-play-state: paused;
+        }
+        .dotv.live { visibility: visible; animation-play-state: running; }
+        .dotv.d-solar { background: var(--gw-solar); }
+        .dotv.d-batt { background: var(--gw-batt); }
+        .dotv.d-grid { background: var(--gw-grid); }
 
         /* the node box is exactly the bubble, so translate(-50%,-50%) puts the
            circle centre precisely on the path endpoints; labels hang outside */
@@ -578,17 +586,13 @@ class GoodweFlowCard extends HTMLElement {
             <path id="p-batt-home" d="M78,168 L342,168"/>
             <path id="p-grid-home" d="M210,262 C210,200 250,168 342,168"/>
             <path id="p-grid-batt" d="M210,262 C210,200 170,168 78,168"/>
-            ${["solar-home|d-solar", "solar-batt|d-solar", "solar-grid|d-solar",
-               "batt-home|d-batt", "grid-home|d-grid", "grid-batt|d-grid"]
-              .map((f) => {
-                const [path, cls] = f.split("|");
-                return `<circle class="dot ${cls}" id="dot-${path}" r="4.5">
-                  <animateMotion id="anim-${path}" dur="4s" repeatCount="indefinite">
-                    <mpath href="#p-${path}"/>
-                  </animateMotion>
-                </circle>`;
-              }).join("")}
           </svg>
+          ${["solar-home|d-solar", "solar-batt|d-solar", "solar-grid|d-solar",
+             "batt-home|d-batt", "grid-home|d-grid", "grid-batt|d-grid"]
+            .map((f) => {
+              const [path, cls] = f.split("|");
+              return `<div class="dotv ${cls}" id="dot-${path}" style="animation-name: kf-${path}"></div>`;
+            }).join("")}
 
           <div class="node solar" style="left:50%; top:15.3%" data-entity="${c.pv_power || ""}">
             <span class="node-label">${L.solar}</span>
@@ -665,16 +669,27 @@ class GoodweFlowCard extends HTMLElement {
       });
     });
 
-    // auto layout: flip to wide when the card itself is wide enough.
-    // ResizeObserver instead of a container query — old kiosk WebViews
-    // (wall tablets) don't support @container and would stay stacked.
+    // style element holding the generated dot keyframes
+    this._kfStyle = document.createElement("style");
+    this.shadowRoot.appendChild(this._kfStyle);
+    this._kfKey = null;
+
+    // ResizeObserver drives both auto-layout (old kiosk WebViews lack
+    // @container) and dot-keyframe regeneration when the card resizes
     if (this._ro) this._ro.disconnect();
-    if (c.layout === "auto" && typeof ResizeObserver !== "undefined") {
-      const cardEl = this.shadowRoot.querySelector(".card");
-      this._ro = new ResizeObserver((entries) => {
-        cardEl.classList.toggle("layout-wide", entries[0].contentRect.width >= 620);
+    const cardEl = this.shadowRoot.querySelector(".card");
+    const flowEl = this.shadowRoot.querySelector(".flow");
+    this._roTargets = [cardEl, flowEl];
+    if (typeof ResizeObserver !== "undefined") {
+      this._ro = new ResizeObserver(() => {
+        if (c.layout === "auto") {
+          cardEl.classList.toggle("layout-wide", cardEl.getBoundingClientRect().width >= 620);
+        }
+        this._buildDotKeyframes();
       });
-      this._ro.observe(cardEl);
+      this._roTargets.forEach((el) => this._ro.observe(el));
+    } else {
+      setTimeout(() => this._buildDotKeyframes(), 0);
     }
 
     this._built = true;
@@ -686,16 +701,42 @@ class GoodweFlowCard extends HTMLElement {
 
   connectedCallback() {
     if (this._ro && this._built) {
-      const cardEl = this.shadowRoot.querySelector(".card");
-      if (cardEl) this._ro.observe(cardEl);
+      (this._roTargets || []).forEach((el) => this._ro.observe(el));
     }
   }
 
   /* -------- per-update rendering -------- */
 
+  // sample each flow path and emit @keyframes moving the dot along it in
+  // pixels for the current card size — transform animations composite on
+  // the GPU, so they stay smooth while the main thread is busy
+  _buildDotKeyframes() {
+    const flow = this.shadowRoot.querySelector(".flow");
+    if (!flow || !this._kfStyle) return;
+    const W = flow.clientWidth, H = flow.clientHeight;
+    if (!W || !H) return;
+    const key = `${W}x${H}`;
+    if (this._kfKey === key) return;
+    this._kfKey = key;
+    let css = "";
+    ["solar-home", "solar-batt", "solar-grid", "batt-home", "grid-home", "grid-batt"]
+      .forEach((name) => {
+        const p = this.shadowRoot.getElementById(`p-${name}`);
+        if (!p || typeof p.getTotalLength !== "function") return;
+        const len = p.getTotalLength();
+        const steps = 24;
+        const fr = [];
+        for (let i = 0; i <= steps; i++) {
+          const pt = p.getPointAtLength((len * i) / steps);
+          fr.push(`${((i / steps) * 100).toFixed(2)}%{transform:translate3d(${((pt.x / 420) * W).toFixed(1)}px,${((pt.y / 300) * H).toFixed(1)}px,0)}`);
+        }
+        css += `@keyframes kf-${name}{${fr.join("")}}`;
+      });
+    this._kfStyle.textContent = css;
+  }
+
   _setFlow(name, watts) {
     const dot = this.shadowRoot.getElementById(`dot-${name}`);
-    const anim = this.shadowRoot.getElementById(`anim-${name}`);
     const path = this.shadowRoot.getElementById(`p-${name}`);
     if (!dot) return;
     const active = watts >= FLOW_THRESHOLD_W;
@@ -706,10 +747,7 @@ class GoodweFlowCard extends HTMLElement {
       const dur = flowDur(watts);
       if (this._durCache[name] !== dur) {
         this._durCache[name] = dur;
-        anim.setAttribute("dur", `${dur}s`);
-        if (typeof anim.beginElement === "function") {
-          try { anim.beginElement(); } catch (e) { /* SMIL not ready yet */ }
-        }
+        dot.style.animationDuration = `${dur}s`;
       }
     }
   }
