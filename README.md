@@ -16,7 +16,8 @@ scenarios.
 - Animated flow lines: solar → home, solar → battery, solar → grid (export),
   battery → home, grid → home (import), grid → battery (fast charge)
 - Battery SOC ring that changes colour (green / amber / red) with charge level,
-  pulsing bolt while charging, and remaining kWh if you give it the pack size
+  pulsing bolt while charging, remaining kWh, and a time-to-full / time-to-empty
+  estimate ("Full ~2:40 pm") — both need `battery_capacity_kwh` set
 - Grid node automatically labels itself *import* / *export*; if you have no
   grid sensor the card derives grid power from PV, battery and house load
 - Live electricity price inside the grid node (e.g. an Amber Electric price
@@ -113,12 +114,13 @@ labels:            # optional — override any text on the card
 | `bars` | — | Labelled power bars: `[{entity, name, max, color}]` — overrides `pN_power`. `%` sensors fill the bar directly (no `max` needed). `strings` is an accepted alias |
 | `tiles` | — | Extra stat tiles: `[{entity, name, sub, icon, color}]`, appended after the built-in daily tiles. Icons: `sun`, `home`, `battery`, `grid`, `chart`, `bolt` |
 | `max_input_power` … `max_input_power4` | `4000` | Max W per string, scales its bar |
-| `battery_capacity_kwh` | — | Usable pack size; enables the kWh readout |
+| `battery_capacity_kwh` | — | Usable pack size; enables the kWh readout and the time-to-full/empty estimate |
+| `battery_min_soc` | `0` | Discharge floor (%); time-to-empty counts down to this instead of 0 |
 | `invert_battery` | `false` | Set if charging/discharging show reversed |
 | `invert_grid` | `false` | Set if import/export show reversed |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
 | `show_bars` / `show_stats` / `show_separator` | `true` | Hide the power bars / stats row / divider line |
-| `labels` | — | Override any text: `solar`, `home`, `battery`, `grid`, `grid_import`, `grid_export`, `charging`, `today`, `production`, `battery_today`, `grid_in`, `grid_out` |
+| `labels` | — | Override any text: `solar`, `home`, `battery`, `grid`, `grid_import`, `grid_export`, `charging`, `full`, `empty`, `today`, `production`, `battery_today`, `grid_in`, `grid_out` |
 
 ### Sign conventions
 

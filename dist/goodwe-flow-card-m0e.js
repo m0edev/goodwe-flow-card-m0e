@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.5.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -61,6 +61,14 @@ const fmtPrice = (v, unit) => {
     return `${v < 0 ? "-" : ""}$${Math.abs(v).toFixed(2)}${denom}`;
   if (/¢|c\//i.test(unit)) return `${Math.round(v)}¢${denom || "/kWh"}`;
   return `${v} ${unit}`;
+};
+
+// battery ETA: hours from now → "~2:40 pm", rounded to 5 min so power
+// jitter doesn't make it flicker; hidden beyond 24 h (power too low to trust)
+const fmtEta = (hours) => {
+  if (!isFinite(hours) || hours <= 0 || hours > 24) return "";
+  const t = new Date(Math.round((Date.now() + hours * 3600000) / 300000) * 300000);
+  return `~${t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 };
 
 // quantize animation duration so we don't restart the dot every update
@@ -158,6 +166,8 @@ class GoodweFlowCard extends HTMLElement {
         grid_import: "import",
         grid_export: "export",
         charging: "Charging",
+        full: "Full",
+        empty: "Empty",
         today: "Today",
         production: "Production",
         battery_today: "Battery",
@@ -167,6 +177,7 @@ class GoodweFlowCard extends HTMLElement {
       },
       strings,
       battery_capacity_kwh: num(config.battery_capacity_kwh),
+      battery_min_soc: num(config.battery_min_soc) ?? 0,
       invert_battery: !!config.invert_battery,
       invert_grid: !!config.invert_grid,
       switches: config.switches || config.custom_settings || [],
@@ -348,6 +359,12 @@ class GoodweFlowCard extends HTMLElement {
           transform: translateX(-50%);
         }
         .node.solar .node-label { top: auto; bottom: calc(100% + 5px); }
+        .node-eta {
+          position: absolute; top: calc(100% + 23px); left: 50%;
+          transform: translateX(-50%); white-space: nowrap;
+          font-size: 11px; font-size: clamp(10px, 3.2cqw, 12px);
+          color: var(--gw-dim);
+        }
         .bubble {
           width: 80px; height: 80px;
           width: clamp(72px, 22cqw, 96px); height: clamp(72px, 22cqw, 96px);
@@ -488,6 +505,7 @@ class GoodweFlowCard extends HTMLElement {
               <span class="node-sub" id="battKwh"></span>
             </div>
             <span class="node-label" id="battLabel">${L.battery}</span>
+            <span class="node-eta" id="battEta" hidden></span>
           </div>
 
           <div class="node house" style="left:81.4%; top:56%" data-entity="${c.house_power || ""}">
@@ -518,7 +536,7 @@ class GoodweFlowCard extends HTMLElement {
       updated: $("updated"),
       pvVal: $("pvVal"), houseVal: $("houseVal"), gridVal: $("gridVal"), gridPrice: $("gridPrice"),
       socVal: $("socVal"), socArc: $("socArc"), battKwh: $("battKwh"),
-      battLabel: $("battLabel"), gridLabel: $("gridLabel"),
+      battLabel: $("battLabel"), battEta: $("battEta"), gridLabel: $("gridLabel"),
       prodToday: $("prodToday"), battToday: $("battToday"),
       gridInToday: $("gridInToday"), gridOutToday: $("gridOutToday"),
       solarNode: this.shadowRoot.querySelector(".node.solar"),
@@ -652,6 +670,21 @@ class GoodweFlowCard extends HTMLElement {
     r.battLabel.textContent =
       battCharge >= FLOW_THRESHOLD_W ? `${L.charging} · ${fmtPower(battCharge)}` :
       battDischarge >= FLOW_THRESHOLD_W ? `${L.battery} · ${fmtPower(battDischarge)}` : L.battery;
+
+    // time-to-full / time-to-empty (needs battery_capacity_kwh)
+    let eta = "";
+    if (c.battery_capacity_kwh && soc !== null) {
+      const capWh = c.battery_capacity_kwh * 1000;
+      if (battCharge >= FLOW_THRESHOLD_W && soc < 99.5) {
+        const t = fmtEta(((100 - soc) / 100) * capWh / battCharge);
+        if (t) eta = `${L.full} ${t}`;
+      } else if (battDischarge >= FLOW_THRESHOLD_W && soc > c.battery_min_soc + 0.5) {
+        const t = fmtEta(((soc - c.battery_min_soc) / 100) * capWh / battDischarge);
+        if (t) eta = `${L.empty} ${t}`;
+      }
+    }
+    r.battEta.textContent = eta;
+    r.battEta.hidden = !eta;
 
     // power bars (unit-aware: % sensors fill directly, no max needed)
     c.strings.forEach((s, i) => {
