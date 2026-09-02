@@ -128,10 +128,12 @@
         { entity: E.earned, name: "Sold", sub: "Today", icon: "grid", color: "#35d49a" },
         { entity: E.spent, name: "Bought", sub: "Today", icon: "grid", color: "#ff6b6b" },
       ],
+      info_columns: 2,
       info: [
         { entity: E.acv, name: "AC In" },
         { entity: E.ttg, name: "Time Left", format: "duration" },
         { entity: E.alarms, name: "Alarms" },
+        { entity: E.soc, name: "Battery SOC" },
       ],
       switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
     });

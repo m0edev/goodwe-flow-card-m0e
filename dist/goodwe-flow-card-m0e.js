@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.7.0";
+const CARD_VERSION = "1.8.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -195,6 +195,8 @@ class GoodweFlowCard extends HTMLElement {
       switches: config.switches || config.custom_settings || [],
       tiles: Array.isArray(config.tiles) ? config.tiles : [],
       info: Array.isArray(config.info) ? config.info : [],
+      tile_columns: Math.min(4, Math.max(1, num(config.tile_columns) ?? 2)),
+      info_columns: Math.min(4, Math.max(1, num(config.info_columns) ?? 1)),
       show_strings: config.show_bars !== false && config.show_strings !== false,
       show_stats: config.show_stats !== false,
       show_separator: config.show_separator !== false,
@@ -294,7 +296,7 @@ class GoodweFlowCard extends HTMLElement {
         </div>`;
     const L = c.labels;
     const statsHtml = c.show_stats ? `
-      <div class="stats">
+      <div class="stats" style="grid-template-columns: repeat(${c.tile_columns}, minmax(0, 1fr))">
         ${c.production_today ? tile(c.production_today, L.production, L.today, "prodToday", "chart", "solar") : ""}
         ${c.battery_today ? tile(c.battery_today, L.battery_today, L.today, "battToday", "battery", "batt") : ""}
         ${c.grid_import_today ? tile(c.grid_import_today, L.grid_in, L.today, "gridInToday", "grid", "grid") : ""}
@@ -308,9 +310,14 @@ class GoodweFlowCard extends HTMLElement {
         </div>`).join("")}
       </div>` : "";
 
+    // in a multi-column info grid, the cells on the last visual row drop
+    // their bottom border (:last-child alone only covers one column)
+    const lastRow = c.info.length % c.info_columns || c.info_columns;
     const infoHtml = c.info.length ? `
-      <div class="info">${c.info.map((t, i) => `
-        <div class="irow" data-entity="${t.entity}">
+      <div class="info" style="${c.info_columns > 1
+        ? `display:grid;grid-template-columns:repeat(${c.info_columns},minmax(0,1fr));column-gap:28px;`
+        : ""}">${c.info.map((t, i) => `
+        <div class="irow${i >= c.info.length - lastRow ? " no-b" : ""}" data-entity="${t.entity}">
           <span class="i-name">${t.name || t.entity}</span>
           <span class="i-val" id="info${i}">—</span>
         </div>`).join("")}</div>` : "";
@@ -486,7 +493,7 @@ class GoodweFlowCard extends HTMLElement {
           gap: 12px; padding: 9px 0; cursor: pointer;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .irow:last-child { border-bottom: none; }
+        .irow:last-child, .irow.no-b { border-bottom: none; }
         .i-name { font-size: 0.78rem; color: var(--gw-dim); white-space: nowrap; }
         .i-val {
           font-size: 0.82rem; font-weight: 700; text-align: right;

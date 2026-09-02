@@ -124,6 +124,8 @@ labels:            # optional — override any text on the card
 | `invert_battery` | `false` | Set if charging/discharging show reversed |
 | `invert_grid` | `false` | Set if import/export show reversed |
 | `info` | — | Compact label/value rows: `[{entity, name, format}]`; `format: duration` renders a seconds sensor as `5h 03m` |
+| `tile_columns` | `2` | Columns in the stat-tile grid (1-4) |
+| `info_columns` | `1` | Columns in the info list (1-4) |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
 | `show_bars` / `show_stats` / `show_separator` | `true` | Hide the power bars / stats row / divider line |
 | `layout` | `auto` | `auto` = side-by-side when the card is wide (landscape tablet), stacked when narrow; `wide` / `tall` force it |
