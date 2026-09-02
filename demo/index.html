@@ -140,7 +140,12 @@
     document.getElementById("mount").appendChild(card);
     card.addEventListener("hass-more-info", (e) => console.log("more-info:", e.detail.entityId));
 
-    function push() { refreshStates(); card.hass = hass; }
+    // fresh hass object with a copied states dict each push — mirrors HA,
+    // and required by the card's skip-unchanged-updates check
+    function push() {
+      refreshStates();
+      card.hass = { states: { ...states }, callService: hass.callService };
+    }
 
     // ---- scenario buttons --------------------------------------------
     const bar = document.getElementById("scenarios");

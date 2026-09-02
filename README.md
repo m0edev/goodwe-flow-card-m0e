@@ -128,6 +128,7 @@ labels:            # optional — override any text on the card
 | `info_columns` | `1` | Columns in the info list (1-4) |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
 | `show_bars` / `show_stats` / `show_separator` | `true` | Hide the power bars / stats row / divider line |
+| `low_fx` | `false` | Drop glows, pulses and transitions — for slow wall-tablet GPUs; flow dots keep animating |
 | `layout` | `auto` | `auto` = side-by-side when the card is wide (landscape tablet), stacked when narrow; `wide` / `tall` force it |
 | `labels` | — | Override any text: `solar`, `home`, `battery`, `grid`, `grid_import`, `grid_export`, `charging`, `full`, `empty`, `updated`, `today`, `production`, `battery_today`, `grid_in`, `grid_out` |
 

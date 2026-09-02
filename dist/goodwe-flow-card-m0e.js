@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.9.0";
+const CARD_VERSION = "1.10.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -209,8 +209,23 @@ class GoodweFlowCard extends HTMLElement {
       show_stats: config.show_stats !== false,
       show_separator: config.show_separator !== false,
       layout: ["tall", "wide", "auto"].includes(config.layout) ? config.layout : "auto",
+      low_fx: !!config.low_fx,
     };
     this._built = false;
+
+    // every entity this card renders — used to skip updates when a hass
+    // change didn't touch any of them (HA re-sets hass for EVERY state
+    // change in the instance, which starves animations on slow tablets)
+    const cc = this._config;
+    this._watched = [
+      cc.pv_power, cc.house_power, cc.battery_power, cc.battery_soc,
+      cc.grid_power, cc.grid_price, cc.production_today, cc.battery_today,
+      cc.grid_import_today, cc.grid_export_today, cc.last_update,
+      ...cc.strings.map((s) => s.entity),
+      ...cc.tiles.map((t) => t.entity),
+      ...cc.info.map((t) => t.entity),
+      ...cc.switches.map((s) => s.entity),
+    ].filter(Boolean);
   }
 
   static getStubConfig(_hass, entities) {
@@ -232,9 +247,16 @@ class GoodweFlowCard extends HTMLElement {
   /* -------- hass updates -------- */
 
   set hass(hass) {
+    const old = this._hass;
     this._hass = hass;
     if (!this._config) return;
-    if (!this._built) this._build();
+    if (!this._built) {
+      this._build();
+      this._update();
+      return;
+    }
+    // state objects are immutable in HA — a changed entity gets a new object
+    if (old && this._watched.every((id) => old.states[id] === hass.states[id])) return;
     this._update();
   }
 
@@ -384,6 +406,15 @@ class GoodweFlowCard extends HTMLElement {
         /* layout: auto gets .layout-wide toggled by a ResizeObserver in JS —
            container queries are missing on older tablet/kiosk WebViews */
 
+        /* low_fx: drop glows, pulses and transitions — box-shadow blur on
+           circles is the most expensive paint on weak tablet GPUs */
+        .fx-off .bubble { box-shadow: none !important; transition: none; }
+        .fx-off .node .gw-ic { transition: none; }
+        .fx-off .node.batt.charging .gw-bolt { animation: none; }
+        .fx-off .lines path { transition: none; }
+        .fx-off .s-fill, .fx-off .soc-ring .arc { transition: none; }
+        .fx-off .sw-toggle, .fx-off .sw-knob, .fx-off .switch { transition: none; }
+
         /* value + unit pairs: big number, small dim unit */
         .u { font-size: 0.62em; font-weight: 600; color: var(--gw-dim); margin-left: 2px; }
 
@@ -532,7 +563,7 @@ class GoodweFlowCard extends HTMLElement {
         .switch.unavail { opacity: 0.4; pointer-events: none; }
       </style>
 
-      <div class="card layout-${c.layout}">
+      <div class="card layout-${c.layout}${c.low_fx ? " fx-off" : ""}">
         <div class="header">
           <span class="title">${c.name}</span>
           <span class="updated" id="updated"></span>
