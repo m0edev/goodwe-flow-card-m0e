@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.16.1";
+const CARD_VERSION = "1.17.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -210,6 +210,8 @@ class GoodweFlowCard extends HTMLElement {
       },
       strings,
       battery_capacity_kwh: num(config.battery_capacity_kwh),
+      pv_max: num(config.pv_max),
+      house_max: num(config.house_max),
       battery_min_soc: num(config.battery_min_soc) ?? 0,
       invert_battery: !!config.invert_battery,
       invert_grid: !!config.invert_grid,
@@ -549,6 +551,11 @@ class GoodweFlowCard extends HTMLElement {
           fill: none; stroke: var(--gw-batt); stroke-width: 3; stroke-linecap: round;
           transition: stroke-dashoffset 0.8s, stroke 0.8s;
         }
+        /* power rings on solar/home (pv_max / house_max): the ring becomes
+           the outline, tinted per node; the glow shadow still applies */
+        .node.ringed .bubble { border-color: transparent !important; }
+        .node.solar .soc-ring .arc { stroke: var(--gw-solar); }
+        .node.house .soc-ring .arc { stroke: var(--gw-house); }
         .node.batt .gw-bolt { fill: none; }
         .node.batt.charging .gw-bolt { fill: currentColor; animation: pulse 1.6s ease-in-out infinite; }
         @keyframes pulse { 50% { opacity: 0.35; } }
@@ -693,9 +700,16 @@ class GoodweFlowCard extends HTMLElement {
               return `<div class="dotv ${cls}" id="dot-${path}" style="animation-name: kf-${path}"></div>`;
             }).join("")}
 
-          <div class="node solar" style="left:50%; top:15.3%" data-entity="${c.pv_power || ""}">
+          <div class="node solar${c.pv_max ? " ringed" : ""}" style="left:50%; top:15.3%" data-entity="${c.pv_power || ""}">
             <span class="node-label">${L.solar}</span>
-            <div class="bubble">${icon("sun")}<span class="node-val" id="pvVal">—</span></div>
+            <div class="bubble">
+              ${c.pv_max ? `<svg class="soc-ring" viewBox="0 0 80 80">
+                <circle class="track" cx="40" cy="40" r="38"/>
+                <circle class="arc" id="pvArc" cx="40" cy="40" r="38"
+                  stroke-dasharray="238.76" stroke-dashoffset="238.76"/>
+              </svg>` : ""}
+              ${icon("sun")}<span class="node-val" id="pvVal">—</span>
+            </div>
           </div>
 
           <div class="node batt" style="left:18.6%; top:56%" data-entity="${c.battery_soc || c.battery_power || ""}">
@@ -713,8 +727,15 @@ class GoodweFlowCard extends HTMLElement {
             <span class="node-eta" id="battEta" hidden></span>
           </div>
 
-          <div class="node house" style="left:81.4%; top:56%" data-entity="${c.house_power || ""}">
-            <div class="bubble">${icon("home")}<span class="node-val" id="houseVal">—</span></div>
+          <div class="node house${c.house_max ? " ringed" : ""}" style="left:81.4%; top:56%" data-entity="${c.house_power || ""}">
+            <div class="bubble">
+              ${c.house_max ? `<svg class="soc-ring" viewBox="0 0 80 80">
+                <circle class="track" cx="40" cy="40" r="38"/>
+                <circle class="arc" id="houseArc" cx="40" cy="40" r="38"
+                  stroke-dasharray="238.76" stroke-dashoffset="238.76"/>
+              </svg>` : ""}
+              ${icon("home")}<span class="node-val" id="houseVal">—</span>
+            </div>
             <span class="node-label">${L.home}</span>
           </div>
 
@@ -746,6 +767,7 @@ class GoodweFlowCard extends HTMLElement {
       updated: $("updated"),
       pvVal: $("pvVal"), houseVal: $("houseVal"), gridVal: $("gridVal"), gridPrice: $("gridPrice"),
       socVal: $("socVal"), socArc: $("socArc"), battKwh: $("battKwh"),
+      pvArc: $("pvArc"), houseArc: $("houseArc"),
       battLabel: $("battLabel"), battEta: $("battEta"), gridLabel: $("gridLabel"),
       prodToday: $("prodToday"), battToday: $("battToday"),
       gridInToday: $("gridInToday"), gridOutToday: $("gridOutToday"),
@@ -909,6 +931,11 @@ class GoodweFlowCard extends HTMLElement {
     r.houseVal.innerHTML = c.house_power ? powerHtml(this._num(c.house_power)) : "—";
     r.solarNode.classList.toggle("active-solar", pv >= FLOW_THRESHOLD_W);
     r.houseNode.classList.toggle("active-house", house >= FLOW_THRESHOLD_W);
+
+    // power rings (fraction of configured max)
+    const RING_C = 238.76;
+    if (r.pvArc) r.pvArc.style.strokeDashoffset = RING_C * (1 - Math.min(1, pv / c.pv_max));
+    if (r.houseArc) r.houseArc.style.strokeDashoffset = RING_C * (1 - Math.min(1, house / c.house_max));
 
     // grid node
     const L = c.labels;
