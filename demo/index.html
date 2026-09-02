@@ -48,6 +48,7 @@
       acv: "sensor.demo_ac_voltage",
       ttg: "sensor.demo_time_to_go",
       alarms: "sensor.demo_alarms",
+      setpoint: "number.demo_grid_setpoint",
       earned: "sensor.grid_earnings_today",
       spent: "sensor.grid_cost_today",
     };
@@ -62,6 +63,7 @@
     let current = { ...scenarios["Sunny day"] };
     let fastOn = false;
     let prodToday = 16.0;
+    let setpoint = 50;
 
     const states = {};
     const setState = (id, state, unit, device_class) => {
@@ -87,6 +89,7 @@
       setState(E.acv, (234 + Math.random()).toFixed(1), "V");
       setState(E.ttg, Math.round(19000 + Math.random() * 100), "s");
       setState(E.alarms, current.alarm || "OK", "");
+      setState(E.setpoint, setpoint, "W");
       setState(E.earned, (3.42 + Math.random() * 0.02).toFixed(2), "$");
       setState(E.spent, (1.17 + Math.random() * 0.01).toFixed(2), "$");
       setState(E.ts, new Date().toISOString());
@@ -96,6 +99,7 @@
     const hass = {
       get states() { return states; },
       callService(domain, service, data) {
+        if (service === "set_value") { setpoint = data.value; push(); return; }
         if (data.entity_id === E.fast) {
           fastOn = !fastOn;
           if (fastOn) applyScenario("Fast charge"); else applyScenario("Sunny day");
@@ -128,6 +132,7 @@
         { entity: E.earned, name: "Sold", sub: "Today", icon: "grid", color: "#35d49a" },
         { entity: E.spent, name: "Bought", sub: "Today", icon: "grid", color: "#ff6b6b" },
       ],
+      info_title: "System",
       info_columns: 2,
       info: [
         { entity: E.acv, name: "AC In" },
@@ -135,6 +140,12 @@
         { entity: E.alarms, name: "Alarms", ok_states: ["OK"] },
         { entity: E.soc, name: "Battery SOC" },
       ],
+      buttons: [{
+        entity: E.setpoint,
+        name: "Grid Setpoint",
+        columns: 3,
+        options: [20, 50, 150, 500, 700, 1000],
+      }],
       switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
     });
     document.getElementById("mount").appendChild(card);

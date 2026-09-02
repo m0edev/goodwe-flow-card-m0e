@@ -37,6 +37,8 @@ scenarios.
   until the state recovers
 - Compact info list (`info:`) for small readings — voltages, currents, states,
   alarms — as label/value rows, with `format: duration` for seconds sensors
+- Preset button grids (`buttons:`) for number/select entities — e.g. an ESS
+  grid-setpoint pad; the active preset highlights, tap to set
 - Quick-toggle pills for switches (e.g. GoodWe Fast Charge) — tap to toggle
 - Tap any node or stat to open the entity's more-info dialog
 - Accepts legacy `b2500d-card` entity keys, so an existing config drops in
@@ -130,7 +132,9 @@ labels:            # optional — override any text on the card
 | `alert_states` / `ok_states` | — | On any tile or info row: flash red while the state matches `alert_states`, or while it does NOT match `ok_states` (case-insensitive) |
 | `tile_columns` | `2` | Columns in the stat-tile grid (1-4) |
 | `info_columns` | `1` | Columns in the info list (1-4) |
-| `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
+| `buttons` | — | Preset grids: `[{entity, name, icon, columns, options: [20, 50, {value: 700, label: Boost}]}]`. Tap calls `number.set_value` / `select.select_option`; active option highlights. Numeric labels get the entity's unit |
+| `info_title` | — | Section heading shown above the info list |
+| `switches` | `[]` | Toggle pills: `[{entity, name}]` — works for `switch`, `input_boolean` and `automation` entities. Legacy alias: `custom_settings` |
 | `show_bars` / `show_stats` / `show_separator` | `true` | Hide the power bars / stats row / divider line |
 | `low_fx` | `false` | Drop glows, pulses and transitions — for slow wall-tablet GPUs; flow dots keep animating |
 | `layout` | `auto` | `auto` = side-by-side when the card is wide (landscape tablet), stacked when narrow; `wide` / `tall` force it |

@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.14.1";
+const CARD_VERSION = "1.15.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -220,6 +220,11 @@ class GoodweFlowCard extends HTMLElement {
       info: (Array.isArray(config.info) ? config.info : []).map((t) => ({
         ...t, _alert: listify(t.alert_states), _ok: listify(t.ok_states),
       })),
+      buttons: (Array.isArray(config.buttons) ? config.buttons : []).map((g) => ({
+        ...g,
+        columns: Math.min(6, Math.max(1, num(g.columns) ?? 3)),
+        options: (g.options || []).map((o) => (typeof o === "object" ? o : { value: o })),
+      })),
       tile_columns: Math.min(4, Math.max(1, num(config.tile_columns) ?? 2)),
       info_columns: Math.min(4, Math.max(1, num(config.info_columns) ?? 1)),
       show_strings: config.show_bars !== false && config.show_strings !== false,
@@ -227,6 +232,7 @@ class GoodweFlowCard extends HTMLElement {
       show_separator: config.show_separator !== false,
       layout: ["tall", "wide", "auto"].includes(config.layout) ? config.layout : "auto",
       low_fx: !!config.low_fx,
+      info_title: config.info_title || "",
     };
     this._built = false;
 
@@ -243,6 +249,7 @@ class GoodweFlowCard extends HTMLElement {
       ...cc.tiles.map((t) => t.entity2),
       ...cc.info.map((t) => t.entity),
       ...cc.switches.map((s) => s.entity),
+      ...cc.buttons.map((g) => g.entity),
     ].filter(Boolean);
   }
 
@@ -376,6 +383,7 @@ class GoodweFlowCard extends HTMLElement {
     // their bottom border (:last-child alone only covers one column)
     const lastRow = c.info.length % c.info_columns || c.info_columns;
     const infoHtml = c.info.length ? `
+      ${c.info_title ? `<div class="info-title">${c.info_title}</div>` : ""}
       <div class="info" style="${c.info_columns > 1
         ? `display:grid;grid-template-columns:repeat(${c.info_columns},minmax(0,1fr));column-gap:28px;`
         : ""}">${c.info.map((t, i) => `
@@ -383,6 +391,18 @@ class GoodweFlowCard extends HTMLElement {
           <span class="i-name">${t.name || t.entity}</span>
           <span class="i-val" id="info${i}">—</span>
         </div>`).join("")}</div>` : "";
+
+    const buttonsHtml = c.buttons.map((g, gi) => `
+      <div class="btns">
+        ${g.name ? `<div class="btns-title">${g.name}<span class="btns-cur" id="bcur${gi}"></span></div>` : ""}
+        <div class="btn-grid" style="grid-template-columns: repeat(${g.columns}, minmax(0, 1fr))">
+          ${g.options.map((o, oi) => `
+          <div class="pbtn" id="pbtn${gi}_${oi}" data-g="${gi}" data-o="${oi}">
+            ${icon(g.icon || "bolt")}
+            <span class="pbtn-l" id="pbl${gi}_${oi}">${o.label ?? o.value}</span>
+          </div>`).join("")}
+        </div>
+      </div>`).join("");
 
     const switchesHtml = c.switches.length ? `
       <div class="switches">${c.switches.map((s, i) => `
@@ -600,6 +620,30 @@ class GoodweFlowCard extends HTMLElement {
         }
         .irow.flash .i-val { color: #ff6b6b; }
 
+        /* ---- preset buttons ---- */
+        .btns { margin-top: 12px; }
+        .btns-title {
+          font-size: 0.78rem; font-weight: 700; margin: 0 2px 7px;
+        }
+        .btns-cur { color: var(--gw-dim); font-weight: 600; }
+        .btn-grid { display: grid; gap: 8px; }
+        .pbtn {
+          background: var(--gw-tile); border-radius: 12px; padding: 11px 6px;
+          display: flex; flex-direction: column; align-items: center; gap: 6px;
+          cursor: pointer; border: 1.5px solid transparent;
+          transition: border-color 0.2s, background 0.2s;
+        }
+        .pbtn .gw-ic { width: 16px; height: 16px; color: var(--gw-dim); }
+        .pbtn-l { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .pbtn.on {
+          border-color: var(--gw-solar);
+          background: color-mix(in srgb, var(--gw-solar) 15%, var(--gw-tile));
+        }
+        .pbtn.on .gw-ic { color: var(--gw-solar); }
+
+        /* ---- section title above the info list ---- */
+        .info-title { font-size: 0.78rem; font-weight: 700; margin: 12px 2px -4px; }
+
         /* ---- switches ---- */
         .switches { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .switch {
@@ -682,10 +726,11 @@ class GoodweFlowCard extends HTMLElement {
         </div>
 
         <div class="side">
-          ${c.show_separator && (stringsHtml || statsHtml || infoHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
+          ${c.show_separator && (stringsHtml || statsHtml || infoHtml || buttonsHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
           ${stringsHtml}
           ${statsHtml}
           ${infoHtml}
+          ${buttonsHtml}
           ${switchesHtml}
         </div>
         </div>
@@ -711,6 +756,21 @@ class GoodweFlowCard extends HTMLElement {
     // node + tile taps → more-info
     this.shadowRoot.querySelectorAll(".node, .stat, .string, .irow").forEach((el) => {
       el.addEventListener("click", () => this._moreInfo(el.dataset.entity));
+    });
+
+    // preset button taps → set the group entity to the option's value
+    this.shadowRoot.querySelectorAll(".pbtn").forEach((b) => {
+      b.addEventListener("click", () => {
+        if (!this._hass) return;
+        const g = this._config.buttons[+b.dataset.g];
+        const o = g.options[+b.dataset.o];
+        const domain = g.entity.split(".")[0];
+        if (domain === "select" || domain === "input_select") {
+          this._hass.callService(domain, "select_option", { entity_id: g.entity, option: String(o.value) });
+        } else {
+          this._hass.callService(domain, "set_value", { entity_id: g.entity, value: o.value });
+        }
+      });
     });
 
     // switch taps → toggle
@@ -958,6 +1018,26 @@ class GoodweFlowCard extends HTMLElement {
         ? lu.state
         : `${L.updated} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
     }
+
+    // preset buttons: highlight the active option, label numbers with the unit
+    c.buttons.forEach((g, gi) => {
+      const st = this._state(g.entity);
+      const unit = st ? (st.attributes.unit_of_measurement || "").trim() : "";
+      const v = st ? num(st.state) : null;
+      g.options.forEach((o, oi) => {
+        const btn = this.shadowRoot.getElementById(`pbtn${gi}_${oi}`);
+        if (!btn) return;
+        const lbl = this.shadowRoot.getElementById(`pbl${gi}_${oi}`);
+        if (lbl && o.label == null && unit) lbl.textContent = `${o.value} ${unit}`;
+        const ov = num(o.value);
+        const active = st && (v !== null && ov !== null
+          ? Math.abs(v - ov) < 0.5
+          : String(st.state).toLowerCase() === String(o.value).toLowerCase());
+        btn.classList.toggle("on", !!active);
+      });
+      const cur = this.shadowRoot.getElementById(`bcur${gi}`);
+      if (cur) cur.textContent = st ? ` · ${st.state}${unit ? ` ${unit}` : ""}` : "";
+    });
 
     // switches
     this._config.switches.forEach((s, i) => {
