@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.12.1";
+const CARD_VERSION = "1.13.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -240,6 +240,7 @@ class GoodweFlowCard extends HTMLElement {
       cc.grid_import_today, cc.grid_export_today, cc.last_update,
       ...cc.strings.map((s) => s.entity),
       ...cc.tiles.map((t) => t.entity),
+      ...cc.tiles.map((t) => t.entity2),
       ...cc.info.map((t) => t.entity),
       ...cc.switches.map((s) => s.entity),
     ].filter(Boolean);
@@ -353,6 +354,7 @@ class GoodweFlowCard extends HTMLElement {
           <span class="stat-title">${t.name || t.entity}</span>
           <span class="stat-label">${t.sub ?? "Now"}</span>
           <span class="stat-val" id="ctile${i}">—</span>
+          ${t.entity2 ? `<span class="stat-val2">${t.name2 ? `<span class="v2n">${t.name2}</span> ` : ""}<span id="ctile2${i}">—</span></span>` : ""}
           ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
         </div>`).join("")}
       </div>` : "";
@@ -546,6 +548,11 @@ class GoodweFlowCard extends HTMLElement {
           font-size: 1.45rem; font-weight: 800; margin-top: 6px;
           font-variant-numeric: tabular-nums; line-height: 1.1;
         }
+        .stat-val2 {
+          font-size: 0.82rem; font-weight: 700; margin-top: 3px;
+          font-variant-numeric: tabular-nums; padding-right: 26px;
+        }
+        .stat-val2 .v2n { color: var(--gw-dim); font-weight: 500; }
 
         /* ---- info list (compact label/value rows) ---- */
         .info {
@@ -905,6 +912,8 @@ class GoodweFlowCard extends HTMLElement {
       const el = this.shadowRoot.getElementById(`ctile${i}`);
       if (!el) return;
       el.innerHTML = this._fmtState(t.entity);
+      const el2 = this.shadowRoot.getElementById(`ctile2${i}`);
+      if (el2) el2.innerHTML = this._fmtState(t.entity2);
       const st = this._state(t.entity);
       el.parentElement.classList.toggle("flash", isAlert(t, st && st.state));
     });
