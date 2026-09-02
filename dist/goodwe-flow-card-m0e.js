@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.15.0";
+const CARD_VERSION = "1.15.1";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -344,10 +344,9 @@ class GoodweFlowCard extends HTMLElement {
 
     const tile = (entity, title, label, valId, ic, icCls) => `
         <div class="stat" data-entity="${entity}">
-          <span class="stat-title">${title}</span>
+          <div class="stat-tr"><span class="stat-title">${title}</span>${icon(ic, icCls)}</div>
           <span class="stat-label">${label}</span>
           <span class="stat-val" id="${valId}">—</span>
-          ${icon(ic, icCls)}
         </div>`;
     const L = c.labels;
     const statsHtml = c.show_stats ? `
@@ -372,10 +371,12 @@ class GoodweFlowCard extends HTMLElement {
           </div>
         </div>` : `
         <div class="stat" data-entity="${t.entity}">
-          <span class="stat-title">${t.name || t.entity}</span>
+          <div class="stat-tr">
+            <span class="stat-title">${t.name || t.entity}</span>
+            ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
+          </div>
           <span class="stat-label">${t.sub ?? "Now"}</span>
           <span class="stat-val" id="ctile${i}">—</span>
-          ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
         </div>`).join("")}
       </div>` : "";
 
@@ -568,10 +569,8 @@ class GoodweFlowCard extends HTMLElement {
           background: var(--gw-tile); border-radius: 14px; padding: 13px 14px 12px; cursor: pointer;
           min-width: 0;
         }
-        .stat .gw-ic {
-          position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-          width: 24px; height: 24px; color: var(--gw-dim); opacity: 0.85;
-        }
+        .stat .stat-tr { display: flex; align-items: center; gap: 7px; }
+        .stat .gw-ic { width: 18px; height: 18px; color: var(--gw-dim); opacity: 0.9; }
         .gw-ic.solar { color: var(--gw-solar); }
         .gw-ic.batt { color: var(--gw-batt); }
         .gw-ic.grid { color: var(--gw-grid); }
@@ -586,8 +585,6 @@ class GoodweFlowCard extends HTMLElement {
           display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
         }
         .stat.two .stat-vals .v2 { text-align: right; }
-        .stat.two .stat-tr { display: flex; align-items: center; gap: 7px; }
-        .stat.two .gw-ic { position: static; transform: none; width: 18px; height: 18px; }
 
         /* ---- info list (compact label/value rows) ---- */
         .info {
