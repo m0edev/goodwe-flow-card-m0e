@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.6.0";
+const CARD_VERSION = "1.6.1";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -319,7 +319,6 @@ class GoodweFlowCard extends HTMLElement {
           --gw-text: var(--primary-text-color, #e8eaf0);
           --gw-dim: var(--secondary-text-color, #8b919e);
           display: block;
-          container-type: inline-size;
         }
         .card {
           background: var(--gw-bg);
@@ -348,19 +347,8 @@ class GoodweFlowCard extends HTMLElement {
         }
         .layout-wide .side .divider { display: none; }
         .layout-wide .flow { margin-top: 0; }
-        @container (min-width: 620px) {
-          .layout-auto .body {
-            display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            column-gap: 26px; align-items: center;
-          }
-          .layout-auto .side {
-            border-left: 1px solid var(--gw-line); padding-left: 26px;
-            align-self: stretch; display: flex; flex-direction: column;
-            justify-content: center; min-width: 0;
-          }
-          .layout-auto .side .divider { display: none; }
-          .layout-auto .flow { margin-top: 0; }
-        }
+        /* layout: auto gets .layout-wide toggled by a ResizeObserver in JS —
+           container queries are missing on older tablet/kiosk WebViews */
 
         /* value + unit pairs: big number, small dim unit */
         .u { font-size: 0.62em; font-weight: 600; color: var(--gw-dim); margin-left: 2px; }
@@ -593,7 +581,30 @@ class GoodweFlowCard extends HTMLElement {
       });
     });
 
+    // auto layout: flip to wide when the card itself is wide enough.
+    // ResizeObserver instead of a container query — old kiosk WebViews
+    // (wall tablets) don't support @container and would stay stacked.
+    if (this._ro) this._ro.disconnect();
+    if (c.layout === "auto" && typeof ResizeObserver !== "undefined") {
+      const cardEl = this.shadowRoot.querySelector(".card");
+      this._ro = new ResizeObserver((entries) => {
+        cardEl.classList.toggle("layout-wide", entries[0].contentRect.width >= 620);
+      });
+      this._ro.observe(cardEl);
+    }
+
     this._built = true;
+  }
+
+  disconnectedCallback() {
+    if (this._ro) this._ro.disconnect();
+  }
+
+  connectedCallback() {
+    if (this._ro && this._built) {
+      const cardEl = this.shadowRoot.querySelector(".card");
+      if (cardEl) this._ro.observe(cardEl);
+    }
   }
 
   /* -------- per-update rendering -------- */
