@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.5.2";
+const CARD_VERSION = "1.5.3";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -411,7 +411,7 @@ class GoodweFlowCard extends HTMLElement {
         @keyframes pulse { 50% { opacity: 0.35; } }
 
         /* ---- PV strings ---- */
-        .divider { height: 1px; background: var(--gw-line); margin: 30px 2px 0; }
+        .divider { height: 1px; background: var(--gw-line); margin: 44px 2px 0; }
         .strings { display: flex; flex-direction: column; gap: 7px; margin: 12px 2px 0; }
         .string { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .s-name { font-size: 0.74rem; font-weight: 600; color: var(--gw-dim); width: 32px; }
@@ -420,7 +420,7 @@ class GoodweFlowCard extends HTMLElement {
         .s-val { font-size: 0.8rem; font-weight: 700; width: 66px; text-align: right; font-variant-numeric: tabular-nums; }
 
         /* ---- stat tiles (SYMBOX style: bold title, dim sub, big value) ---- */
-        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
         .stat {
           position: relative; display: flex; flex-direction: column; gap: 2px;
           background: var(--gw-tile); border-radius: 14px; padding: 13px 14px 12px; cursor: pointer;
