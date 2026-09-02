@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.5.3";
+const CARD_VERSION = "1.6.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -186,6 +186,7 @@ class GoodweFlowCard extends HTMLElement {
       show_strings: config.show_bars !== false && config.show_strings !== false,
       show_stats: config.show_stats !== false,
       show_separator: config.show_separator !== false,
+      layout: ["tall", "wide", "auto"].includes(config.layout) ? config.layout : "auto",
     };
     this._built = false;
   }
@@ -318,6 +319,7 @@ class GoodweFlowCard extends HTMLElement {
           --gw-text: var(--primary-text-color, #e8eaf0);
           --gw-dim: var(--secondary-text-color, #8b919e);
           display: block;
+          container-type: inline-size;
         }
         .card {
           background: var(--gw-bg);
@@ -332,6 +334,33 @@ class GoodweFlowCard extends HTMLElement {
         .header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
         .title { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.05em; }
         .updated { font-size: 0.72rem; color: var(--gw-dim); }
+
+        /* ---- wide layout: flow left, tiles right (layout: wide, or auto on
+                a wide card such as a landscape tablet panel) ---- */
+        .layout-wide .body {
+          display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          column-gap: 26px; align-items: center;
+        }
+        .layout-wide .side {
+          border-left: 1px solid var(--gw-line); padding-left: 26px;
+          align-self: stretch; display: flex; flex-direction: column;
+          justify-content: center; min-width: 0;
+        }
+        .layout-wide .side .divider { display: none; }
+        .layout-wide .flow { margin-top: 0; }
+        @container (min-width: 620px) {
+          .layout-auto .body {
+            display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            column-gap: 26px; align-items: center;
+          }
+          .layout-auto .side {
+            border-left: 1px solid var(--gw-line); padding-left: 26px;
+            align-self: stretch; display: flex; flex-direction: column;
+            justify-content: center; min-width: 0;
+          }
+          .layout-auto .side .divider { display: none; }
+          .layout-auto .flow { margin-top: 0; }
+        }
 
         /* value + unit pairs: big number, small dim unit */
         .u { font-size: 0.62em; font-weight: 600; color: var(--gw-dim); margin-left: 2px; }
@@ -463,12 +492,13 @@ class GoodweFlowCard extends HTMLElement {
         .switch.unavail { opacity: 0.4; pointer-events: none; }
       </style>
 
-      <div class="card">
+      <div class="card layout-${c.layout}">
         <div class="header">
           <span class="title">${c.name}</span>
           <span class="updated" id="updated"></span>
         </div>
 
+        <div class="body">
         <div class="flow">
           <svg class="lines" viewBox="0 0 420 300" preserveAspectRatio="none">
             <path id="p-solar-home" d="M210,46 C210,120 250,168 342,168"/>
@@ -524,10 +554,13 @@ class GoodweFlowCard extends HTMLElement {
           </div>
         </div>
 
-        ${c.show_separator && (stringsHtml || statsHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
-        ${stringsHtml}
-        ${statsHtml}
-        ${switchesHtml}
+        <div class="side">
+          ${c.show_separator && (stringsHtml || statsHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
+          ${stringsHtml}
+          ${statsHtml}
+          ${switchesHtml}
+        </div>
+        </div>
       </div>
     `;
 

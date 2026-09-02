@@ -27,6 +27,9 @@ scenarios.
   each with its own name, max scale and colour; a divider separates them from
   the flow diagram
 - Daily stats row: solar today, battery today, grid in/out today
+- Landscape/tablet layout: `layout: auto` (default) puts the flow beside the
+  tiles whenever the card is wider than ~620px; force with `layout: wide` or
+  keep it stacked with `layout: tall`
 - Custom tiles for any sensor (`tiles:`) — UPS load, prices, temperatures —
   auto-formatted by unit (%, W/kW, Wh/kWh, $/kWh) with pick-an-icon and colour
 - Quick-toggle pills for switches (e.g. GoodWe Fast Charge) — tap to toggle
@@ -120,6 +123,7 @@ labels:            # optional — override any text on the card
 | `invert_grid` | `false` | Set if import/export show reversed |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
 | `show_bars` / `show_stats` / `show_separator` | `true` | Hide the power bars / stats row / divider line |
+| `layout` | `auto` | `auto` = side-by-side when the card is wide (landscape tablet), stacked when narrow; `wide` / `tall` force it |
 | `labels` | — | Override any text: `solar`, `home`, `battery`, `grid`, `grid_import`, `grid_export`, `charging`, `full`, `empty`, `updated`, `today`, `production`, `battery_today`, `grid_in`, `grid_out` |
 
 ### Sign conventions
