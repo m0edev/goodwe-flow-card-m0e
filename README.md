@@ -120,7 +120,7 @@ labels:            # optional — override any text on the card
 | `entities.last_update` | — | Timestamp sensor shown in the header |
 | `entities.p1_power` … `p4_power` | — | Per-string PV sensors (legacy style) |
 | `bars` | — | Labelled power bars: `[{entity, name, max, color}]` — overrides `pN_power`. `%` sensors fill the bar directly (no `max` needed). `strings` is an accepted alias |
-| `tiles` | — | Extra stat tiles: `[{entity, name, sub, icon, color, entity2, name2}]`, appended after the built-in daily tiles. `entity2` adds a second smaller value line, prefixed by `name2`. Icons: `sun`, `home`, `battery`, `grid`, `chart`, `bolt`, `clock`, `bell`, `thermo` |
+| `tiles` | — | Extra stat tiles: `[{entity, name, sub, icon, color, entity2, name2}]`, appended after the built-in daily tiles. `entity2` adds a second full-size value beside the first, labelled by `name2`. Icons: `sun`, `home`, `battery`, `grid`, `chart`, `bolt`, `clock`, `bell`, `thermo` |
 | `max_input_power` … `max_input_power4` | `4000` | Max W per string, scales its bar |
 | `battery_capacity_kwh` | — | Usable pack size; enables the kWh readout and the time-to-full/empty estimate |
 | `battery_min_soc` | `0` | Discharge floor (%); time-to-empty counts down to this instead of 0 |

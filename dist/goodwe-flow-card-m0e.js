@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.13.2";
+const CARD_VERSION = "1.14.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -349,12 +349,23 @@ class GoodweFlowCard extends HTMLElement {
         ${c.battery_today ? tile(c.battery_today, L.battery_today, L.today, "battToday", "battery", "batt") : ""}
         ${c.grid_import_today ? tile(c.grid_import_today, L.grid_in, L.today, "gridInToday", "grid", "grid") : ""}
         ${c.grid_export_today ? tile(c.grid_export_today, L.grid_out, L.today, "gridOutToday", "grid", "grid") : ""}
-        ${c.tiles.map((t, i) => `
+        ${c.tiles.map((t, i) => t.entity2 ? `
+        <div class="stat two" data-entity="${t.entity}">
+          <span class="stat-title">${t.name || t.entity}</span>
+          <div class="stat-lbls">
+            <span class="stat-label">${t.sub ?? "Now"}</span>
+            <span class="stat-label">${t.name2 ?? ""}</span>
+          </div>
+          <div class="stat-vals">
+            <span class="stat-val" id="ctile${i}">—</span>
+            <span class="stat-val v2" id="ctile2${i}">—</span>
+          </div>
+          ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
+        </div>` : `
         <div class="stat" data-entity="${t.entity}">
           <span class="stat-title">${t.name || t.entity}</span>
           <span class="stat-label">${t.sub ?? "Now"}</span>
           <span class="stat-val" id="ctile${i}">—</span>
-          ${t.entity2 ? `<span class="stat-val2">${t.name2 ? `<span class="v2n">${t.name2}</span> ` : ""}<span id="ctile2${i}">—</span></span>` : ""}
           ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
         </div>`).join("")}
       </div>` : "";
@@ -548,11 +559,12 @@ class GoodweFlowCard extends HTMLElement {
           font-size: 1.45rem; font-weight: 800; margin-top: 6px;
           font-variant-numeric: tabular-nums; line-height: 1.1;
         }
-        .stat-val2 {
-          font-size: 0.82rem; font-weight: 700; margin-top: 3px;
-          font-variant-numeric: tabular-nums; padding-right: 26px;
+        /* two-entity tiles: main and second value side by side, same size */
+        .stat.two .stat-lbls, .stat.two .stat-vals {
+          display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
         }
-        .stat-val2 .v2n { color: var(--gw-dim); font-weight: 500; }
+        .stat.two .stat-vals .v2 { text-align: right; }
+        .stat.two .gw-ic { top: 14px; right: 14px; transform: none; width: 20px; height: 20px; }
 
         /* ---- info list (compact label/value rows) ---- */
         .info {
