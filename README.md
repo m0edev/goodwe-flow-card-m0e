@@ -32,6 +32,9 @@ scenarios.
   keep it stacked with `layout: tall`
 - Custom tiles for any sensor (`tiles:`) — UPS load, prices, temperatures —
   auto-formatted by unit (%, W/kW, Wh/kWh, $/kWh) with pick-an-icon and colour
+- Alert flashing: give a tile or info row `ok_states: [OK]` (flash on anything
+  else) or `alert_states: [ALARM, GRID_LOST]` (flash on match) — it pulses red
+  until the state recovers
 - Compact info list (`info:`) for small readings — voltages, currents, states,
   alarms — as label/value rows, with `format: duration` for seconds sensors
 - Quick-toggle pills for switches (e.g. GoodWe Fast Charge) — tap to toggle
@@ -124,6 +127,7 @@ labels:            # optional — override any text on the card
 | `invert_battery` | `false` | Set if charging/discharging show reversed |
 | `invert_grid` | `false` | Set if import/export show reversed |
 | `info` | — | Compact label/value rows: `[{entity, name, format}]`; `format: duration` renders a seconds sensor as `5h 03m` |
+| `alert_states` / `ok_states` | — | On any tile or info row: flash red while the state matches `alert_states`, or while it does NOT match `ok_states` (case-insensitive) |
 | `tile_columns` | `2` | Columns in the stat-tile grid (1-4) |
 | `info_columns` | `1` | Columns in the info list (1-4) |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |

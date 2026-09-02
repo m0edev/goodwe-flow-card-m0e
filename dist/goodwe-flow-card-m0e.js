@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.11.0";
+const CARD_VERSION = "1.12.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -22,6 +22,19 @@ const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 const num = (v) => {
   const n = typeof v === "string" ? parseFloat(v) : v;
   return Number.isFinite(n) ? n : null;
+};
+
+// normalize alert_states / ok_states config: single value or list → lowercase list
+const listify = (v) =>
+  v == null ? null : (Array.isArray(v) ? v : [v]).map((s) => String(s).trim().toLowerCase());
+
+// should this tile/row flash for the given state?
+const isAlert = (item, state) => {
+  if (state == null) return false;
+  const s = String(state).trim().toLowerCase();
+  if (item._alert) return item._alert.includes(s);
+  if (item._ok) return !item._ok.includes(s);
+  return false;
 };
 
 const fmtPower = (w) => {
@@ -201,8 +214,12 @@ class GoodweFlowCard extends HTMLElement {
       invert_battery: !!config.invert_battery,
       invert_grid: !!config.invert_grid,
       switches: config.switches || config.custom_settings || [],
-      tiles: Array.isArray(config.tiles) ? config.tiles : [],
-      info: Array.isArray(config.info) ? config.info : [],
+      tiles: (Array.isArray(config.tiles) ? config.tiles : []).map((t) => ({
+        ...t, _alert: listify(t.alert_states), _ok: listify(t.ok_states),
+      })),
+      info: (Array.isArray(config.info) ? config.info : []).map((t) => ({
+        ...t, _alert: listify(t.alert_states), _ok: listify(t.ok_states),
+      })),
       tile_columns: Math.min(4, Math.max(1, num(config.tile_columns) ?? 2)),
       info_columns: Math.min(4, Math.max(1, num(config.info_columns) ?? 1)),
       show_strings: config.show_bars !== false && config.show_strings !== false,
@@ -548,6 +565,19 @@ class GoodweFlowCard extends HTMLElement {
         }
         .i-val .u { font-size: 0.75em; }
 
+        /* ---- alert flash (kept even in low_fx — it's a signal, not decor) ---- */
+        @keyframes gwflash {
+          0%, 100% { background: var(--gw-tile); }
+          50% { background: rgba(255, 107, 107, 0.28); }
+        }
+        .stat.flash { animation: gwflash 1.1s ease-in-out infinite; }
+        .stat.flash .stat-val, .stat.flash .gw-ic { color: #ff6b6b !important; }
+        .irow.flash {
+          animation: gwflash 1.1s ease-in-out infinite;
+          border-radius: 8px; padding-inline: 8px; margin-inline: -8px;
+        }
+        .irow.flash .i-val { color: #ff6b6b; }
+
         /* ---- switches ---- */
         .switches { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .switch {
@@ -873,7 +903,10 @@ class GoodweFlowCard extends HTMLElement {
     // custom tiles
     c.tiles.forEach((t, i) => {
       const el = this.shadowRoot.getElementById(`ctile${i}`);
-      if (el) el.innerHTML = this._fmtState(t.entity);
+      if (!el) return;
+      el.innerHTML = this._fmtState(t.entity);
+      const st = this._state(t.entity);
+      el.parentElement.classList.toggle("flash", isAlert(t, st && st.state));
     });
 
     // info rows
@@ -883,6 +916,8 @@ class GoodweFlowCard extends HTMLElement {
       el.innerHTML = t.format === "duration"
         ? fmtDuration(this._num(t.entity))
         : this._fmtState(t.entity);
+      const st = this._state(t.entity);
+      el.parentElement.classList.toggle("flash", isAlert(t, st && st.state));
     });
 
     // stats

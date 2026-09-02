@@ -56,7 +56,7 @@
       "Sunny day": { pv: 4800, house: 900, batt: -1400, soc: 76, price: 0.09 },  // batt charging, exporting
       "Cloudy": { pv: 620, house: 640, batt: 30, soc: 64, price: 0.24 },
       "Evening": { pv: 0, house: 1150, batt: 1100, soc: 48, price: 0.47 },        // battery carrying the house
-      "Night import": { pv: 0, house: 800, batt: 0, soc: 14, price: 0.21 },
+      "Night import": { pv: 0, house: 800, batt: 0, soc: 14, price: 0.21, alarm: "LOW BATTERY" },
       "Fast charge": { pv: 0, house: 600, batt: -3000, soc: 35, price: 0.12 },    // grid → battery
     };
     let current = { ...scenarios["Sunny day"] };
@@ -86,7 +86,7 @@
       setState(E.ups, Math.round(4 + current.house / 80), "%");
       setState(E.acv, (234 + Math.random()).toFixed(1), "V");
       setState(E.ttg, Math.round(19000 + Math.random() * 100), "s");
-      setState(E.alarms, "OK", "");
+      setState(E.alarms, current.alarm || "OK", "");
       setState(E.earned, (3.42 + Math.random() * 0.02).toFixed(2), "$");
       setState(E.spent, (1.17 + Math.random() * 0.01).toFixed(2), "$");
       setState(E.ts, new Date().toISOString());
@@ -132,7 +132,7 @@
       info: [
         { entity: E.acv, name: "AC In" },
         { entity: E.ttg, name: "Time Left", format: "duration" },
-        { entity: E.alarms, name: "Alarms" },
+        { entity: E.alarms, name: "Alarms", ok_states: ["OK"] },
         { entity: E.soc, name: "Battery SOC" },
       ],
       switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
