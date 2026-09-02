@@ -45,6 +45,9 @@
       fast: "switch.symphony_house_goodwe_fast_charging_switch",
       price: "sensor.symphony_house_amber_express_symphonyhouse_general_price",
       ups: "sensor.symphony_house_goodwe_backup_load",
+      acv: "sensor.demo_ac_voltage",
+      ttg: "sensor.demo_time_to_go",
+      alarms: "sensor.demo_alarms",
       earned: "sensor.grid_earnings_today",
       spent: "sensor.grid_cost_today",
     };
@@ -81,6 +84,9 @@
       setState(E.battDis, "4.31", "kWh");
       setState(E.price, jitter(current.price, 0.04).toFixed(4), "$/kWh");
       setState(E.ups, Math.round(4 + current.house / 80), "%");
+      setState(E.acv, (234 + Math.random()).toFixed(1), "V");
+      setState(E.ttg, Math.round(19000 + Math.random() * 100), "s");
+      setState(E.alarms, "OK", "");
       setState(E.earned, (3.42 + Math.random() * 0.02).toFixed(2), "$");
       setState(E.spent, (1.17 + Math.random() * 0.01).toFixed(2), "$");
       setState(E.ts, new Date().toISOString());
@@ -121,6 +127,11 @@
         { entity: E.ups, name: "UPS", sub: "Load", icon: "bolt", color: "#5aa9e6" },
         { entity: E.earned, name: "Sold", sub: "Today", icon: "grid", color: "#35d49a" },
         { entity: E.spent, name: "Bought", sub: "Today", icon: "grid", color: "#ff6b6b" },
+      ],
+      info: [
+        { entity: E.acv, name: "AC In" },
+        { entity: E.ttg, name: "Time Left", format: "duration" },
+        { entity: E.alarms, name: "Alarms" },
       ],
       switches: [{ entity: E.fast, name: "Fast Charge", icon: "mdi:battery-charging-100" }],
     });

@@ -32,6 +32,8 @@ scenarios.
   keep it stacked with `layout: tall`
 - Custom tiles for any sensor (`tiles:`) — UPS load, prices, temperatures —
   auto-formatted by unit (%, W/kW, Wh/kWh, $/kWh) with pick-an-icon and colour
+- Compact info list (`info:`) for small readings — voltages, currents, states,
+  alarms — as label/value rows, with `format: duration` for seconds sensors
 - Quick-toggle pills for switches (e.g. GoodWe Fast Charge) — tap to toggle
 - Tap any node or stat to open the entity's more-info dialog
 - Accepts legacy `b2500d-card` entity keys, so an existing config drops in
@@ -121,6 +123,7 @@ labels:            # optional — override any text on the card
 | `battery_min_soc` | `0` | Discharge floor (%); time-to-empty counts down to this instead of 0 |
 | `invert_battery` | `false` | Set if charging/discharging show reversed |
 | `invert_grid` | `false` | Set if import/export show reversed |
+| `info` | — | Compact label/value rows: `[{entity, name, format}]`; `format: duration` renders a seconds sensor as `5h 03m` |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
 | `show_bars` / `show_stats` / `show_separator` | `true` | Hide the power bars / stats row / divider line |
 | `layout` | `auto` | `auto` = side-by-side when the card is wide (landscape tablet), stacked when narrow; `wide` / `tall` force it |

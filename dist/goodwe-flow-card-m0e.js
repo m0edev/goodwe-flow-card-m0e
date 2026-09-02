@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.6.1";
+const CARD_VERSION = "1.7.0";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -61,6 +61,17 @@ const fmtPrice = (v, unit) => {
     return `${v < 0 ? "-" : ""}$${Math.abs(v).toFixed(2)}${denom}`;
   if (/¢|c\//i.test(unit)) return `${Math.round(v)}¢${denom || "/kWh"}`;
   return `${v} ${unit}`;
+};
+
+// seconds → "45s" / "12m" / "5h 03m" / "2d 4h", for info rows with format: duration
+const fmtDuration = (secs) => {
+  if (secs === null || !isFinite(secs) || secs <= 0) return "—";
+  if (secs < 60) return `${Math.round(secs)}s`;
+  const m = Math.round(secs / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${String(m % 60).padStart(2, "0")}m`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
 };
 
 // battery ETA: hours from now → "~2:40 pm", rounded to 5 min so power
@@ -183,6 +194,7 @@ class GoodweFlowCard extends HTMLElement {
       invert_grid: !!config.invert_grid,
       switches: config.switches || config.custom_settings || [],
       tiles: Array.isArray(config.tiles) ? config.tiles : [],
+      info: Array.isArray(config.info) ? config.info : [],
       show_strings: config.show_bars !== false && config.show_strings !== false,
       show_stats: config.show_stats !== false,
       show_separator: config.show_separator !== false,
@@ -295,6 +307,13 @@ class GoodweFlowCard extends HTMLElement {
           ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
         </div>`).join("")}
       </div>` : "";
+
+    const infoHtml = c.info.length ? `
+      <div class="info">${c.info.map((t, i) => `
+        <div class="irow" data-entity="${t.entity}">
+          <span class="i-name">${t.name || t.entity}</span>
+          <span class="i-val" id="info${i}">—</span>
+        </div>`).join("")}</div>` : "";
 
     const switchesHtml = c.switches.length ? `
       <div class="switches">${c.switches.map((s, i) => `
@@ -457,6 +476,24 @@ class GoodweFlowCard extends HTMLElement {
           font-variant-numeric: tabular-nums; line-height: 1.1;
         }
 
+        /* ---- info list (compact label/value rows) ---- */
+        .info {
+          background: var(--gw-tile); border-radius: 14px;
+          padding: 3px 14px; margin-top: 10px;
+        }
+        .irow {
+          display: flex; justify-content: space-between; align-items: baseline;
+          gap: 12px; padding: 9px 0; cursor: pointer;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .irow:last-child { border-bottom: none; }
+        .i-name { font-size: 0.78rem; color: var(--gw-dim); white-space: nowrap; }
+        .i-val {
+          font-size: 0.82rem; font-weight: 700; text-align: right;
+          font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis;
+        }
+        .i-val .u { font-size: 0.75em; }
+
         /* ---- switches ---- */
         .switches { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .switch {
@@ -543,9 +580,10 @@ class GoodweFlowCard extends HTMLElement {
         </div>
 
         <div class="side">
-          ${c.show_separator && (stringsHtml || statsHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
+          ${c.show_separator && (stringsHtml || statsHtml || infoHtml || switchesHtml) ? `<div class="divider"></div>` : ""}
           ${stringsHtml}
           ${statsHtml}
+          ${infoHtml}
           ${switchesHtml}
         </div>
         </div>
@@ -569,7 +607,7 @@ class GoodweFlowCard extends HTMLElement {
     this._durCache = {};
 
     // node + tile taps → more-info
-    this.shadowRoot.querySelectorAll(".node, .stat, .string").forEach((el) => {
+    this.shadowRoot.querySelectorAll(".node, .stat, .string, .irow").forEach((el) => {
       el.addEventListener("click", () => this._moreInfo(el.dataset.entity));
     });
 
@@ -752,6 +790,15 @@ class GoodweFlowCard extends HTMLElement {
     c.tiles.forEach((t, i) => {
       const el = this.shadowRoot.getElementById(`ctile${i}`);
       if (el) el.innerHTML = this._fmtState(t.entity);
+    });
+
+    // info rows
+    c.info.forEach((t, i) => {
+      const el = this.shadowRoot.getElementById(`info${i}`);
+      if (!el) return;
+      el.innerHTML = t.format === "duration"
+        ? fmtDuration(this._num(t.entity))
+        : this._fmtState(t.entity);
     });
 
     // stats
