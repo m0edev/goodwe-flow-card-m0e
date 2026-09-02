@@ -17,7 +17,7 @@ scenarios.
   battery → home, grid → home (import), grid → battery (fast charge)
 - Battery SOC ring that changes colour (green / amber / red) with charge level,
   pulsing bolt while charging, remaining kWh, and a time-to-full / time-to-empty
-  estimate ("Full ~2:40 pm") — both need `battery_capacity_kwh` set
+  estimate ("Full 2:40 pm") — both need `battery_capacity_kwh` set
 - Grid node automatically labels itself *import* / *export*; if you have no
   grid sensor the card derives grid power from PV, battery and house load
 - Live electricity price inside the grid node (e.g. an Amber Electric price

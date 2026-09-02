@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.5.1";
+const CARD_VERSION = "1.5.2";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -68,7 +68,7 @@ const fmtPrice = (v, unit) => {
 const fmtEta = (hours) => {
   if (!isFinite(hours) || hours <= 0 || hours > 24) return "";
   const t = new Date(Math.round((Date.now() + hours * 3600000) / 300000) * 300000);
-  return `~${t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  return t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 };
 
 // quantize animation duration so we don't restart the dot every update
