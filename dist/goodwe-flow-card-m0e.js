@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.14.0";
+const CARD_VERSION = "1.14.1";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -351,7 +351,10 @@ class GoodweFlowCard extends HTMLElement {
         ${c.grid_export_today ? tile(c.grid_export_today, L.grid_out, L.today, "gridOutToday", "grid", "grid") : ""}
         ${c.tiles.map((t, i) => t.entity2 ? `
         <div class="stat two" data-entity="${t.entity}">
-          <span class="stat-title">${t.name || t.entity}</span>
+          <div class="stat-tr">
+            <span class="stat-title">${t.name || t.entity}</span>
+            ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
+          </div>
           <div class="stat-lbls">
             <span class="stat-label">${t.sub ?? "Now"}</span>
             <span class="stat-label">${t.name2 ?? ""}</span>
@@ -360,7 +363,6 @@ class GoodweFlowCard extends HTMLElement {
             <span class="stat-val" id="ctile${i}">—</span>
             <span class="stat-val v2" id="ctile2${i}">—</span>
           </div>
-          ${icon(t.icon || "bolt", "", t.color ? `color:${t.color}` : "")}
         </div>` : `
         <div class="stat" data-entity="${t.entity}">
           <span class="stat-title">${t.name || t.entity}</span>
@@ -564,7 +566,8 @@ class GoodweFlowCard extends HTMLElement {
           display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
         }
         .stat.two .stat-vals .v2 { text-align: right; }
-        .stat.two .gw-ic { top: 14px; right: 14px; transform: none; width: 20px; height: 20px; }
+        .stat.two .stat-tr { display: flex; align-items: center; gap: 7px; }
+        .stat.two .gw-ic { position: static; transform: none; width: 18px; height: 18px; }
 
         /* ---- info list (compact label/value rows) ---- */
         .info {
