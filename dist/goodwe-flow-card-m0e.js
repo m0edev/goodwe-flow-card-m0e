@@ -14,7 +14,7 @@
  * existing b2500d config can be dropped in with only the `type` changed.
  */
 
-const CARD_VERSION = "1.5.0";
+const CARD_VERSION = "1.5.1";
 const FLOW_THRESHOLD_W = 25; // flows below this are treated as zero
 
 /* ---------------------------------------------------------------- helpers */
@@ -168,6 +168,7 @@ class GoodweFlowCard extends HTMLElement {
         charging: "Charging",
         full: "Full",
         empty: "Empty",
+        updated: "updated",
         today: "Today",
         production: "Production",
         battery_today: "Battery",
@@ -721,7 +722,7 @@ class GoodweFlowCard extends HTMLElement {
       const d = new Date(lu.state);
       r.updated.textContent = isNaN(d)
         ? lu.state
-        : `updated ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        : `${L.updated} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
     }
 
     // switches

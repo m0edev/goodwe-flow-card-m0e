@@ -120,7 +120,7 @@ labels:            # optional — override any text on the card
 | `invert_grid` | `false` | Set if import/export show reversed |
 | `switches` | `[]` | Toggle pills: `[{entity, name}]`. Legacy alias: `custom_settings` |
 | `show_bars` / `show_stats` / `show_separator` | `true` | Hide the power bars / stats row / divider line |
-| `labels` | — | Override any text: `solar`, `home`, `battery`, `grid`, `grid_import`, `grid_export`, `charging`, `full`, `empty`, `today`, `production`, `battery_today`, `grid_in`, `grid_out` |
+| `labels` | — | Override any text: `solar`, `home`, `battery`, `grid`, `grid_import`, `grid_export`, `charging`, `full`, `empty`, `updated`, `today`, `production`, `battery_today`, `grid_in`, `grid_out` |
 
 ### Sign conventions
 
